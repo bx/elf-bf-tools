@@ -1,0 +1,56 @@
+Copyright (c) 2012 Rebecca (bx) Shapiro
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+OVERVIEW
+This project contains tools that can be used to coarse the gcc's runtime loader
+into performing interesing operations using only valid relocation entires and
+symbols.
+
+Slides from our BerlinSides0x3 talk can be found here:
+http://www.cs.dartmouth.edu/~bx/elf-bf-tools/slides/ELF-berlinsides-0x3.pdf
+
+directories:
+libelf_bf/ contains files that make up the library
+elf_bf_compiler/ implementation for Brainfuck to ELF compiler
+elf_bf_debug/ contains useful scripts for debugging the rultime loading process
+as it processes relocation entries
+ping_backdoor/ contains code that uses relocation entries to build a backdoor
+into ping
+demo/ contains a simple c program to play with
+eresi/ contains a patch for the eresi toolkit
+
+
+
+BUILDING
+
+At the moment these instructions are for amd64 machines running
+Ubuntu 11.10. I reccomend using the same setup.  If you are running ubuntu, but
+not the correct version, you can setup a Ubuntu 11.10 schroot environment.
+
+You will need to install eresi from source, which can be found at
+http://www.eresi-project.org/
+Their code can be checked out using:
+$> svn checkout http://svn.eresi-project.org/svn/trunk/ eresi
+
+Next, apply the patch in eresi/eresi.patch. To do so, change into the eresi source directory and
+patch -p0 -i <path to eresi/eresi.patch>
+
+build eresi as follows;
+./configure --prefix /usr/local --enable-64
+make
+sudo make install64
+
+To build elf-bf-tools, in the elf-bf-tools directory
+> cmake .
+> make
+
+..and that's it
+
+Thank's for reading, be sure to visit the README files located in
+elf_bf_compiler, elf_bf_debuf, and ping_backdoor if you endup working with the
+code there.
