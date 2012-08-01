@@ -65,6 +65,7 @@ eresi_Addr get_l_direct_opencount(eresi_Addr l)
   return ((eresi_Addr) l) + 0x310;
 }
 
+
 eresi_Addr get_l_addr(eresi_Addr l)
 {
   return ((eresi_Addr) l);

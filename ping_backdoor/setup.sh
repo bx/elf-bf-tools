@@ -28,9 +28,9 @@ apt-get source inetutils
 sudo apt-get build-dep inetutils
 cd inetutils-1.8
 GLIBC=$PWD/../../../elf_bf_debug/eglibc/root
-
-if [ -f $GLIBC/lib/ld-2.13.so ] ; then
-    CFLAGS="-g -Wl,-dynamic-linker=$GLIBC/lib/ld-2.13.so -Wl,-R$(GLIBC)/lib/ -I$GLIBC/include -L$GLIBC/lib" ./configure
+LD=$GLIBC/lib/ld-linux-x86-64.so.2
+if [ -f $LD ] ; then
+    CFLAGS="-g -Wl,-dynamic-linker=$LD -Wl,-R$GLIBC/lib/ -I$GLIBC/include -L$GLIBC/lib" ./configure
 else
     echo "WARNING: eglibc not built yet, ping_backdoor will not work properly. Look at ../elf_bf_debug/README for information on how to eglibc"
     ./configure

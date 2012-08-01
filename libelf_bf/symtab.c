@@ -49,15 +49,17 @@ eresi_Addr symtab_get_sym_addr(elfshsect_t *sec, eresi_Addr index)
 
 void symtab_set_sym(elf_bf_Sym *sym, eresi_Addr size, eresi_Addr value, eresi_Addr type)
 {
-  elfsh_set_symbol_size(sym->sym,size);
-  elfsh_set_symbol_value(sym->sym,value);
-  elfsh_set_symbol_type(sym->sym,type);
+  if (NULL != sym) {
+    elfsh_set_symbol_size(sym->sym,size);
+    elfsh_set_symbol_value(sym->sym,value);
+    elfsh_set_symbol_type(sym->sym,type);
+  }
 }
 
 
 eresi_Addr symtab_get_value_addr(elf_bf_Sym *sym)
 {
-  if (sym) {
+  if (sym && (sym->addr)) {
     return (eresi_Addr) &(((Elf64_Sym *)sym->addr)->st_value);
   } else {
     return 0;
@@ -73,7 +75,7 @@ eresi_Addr symtab_get_index(elf_bf_Sym *sym)
 }
 eresi_Addr symtab_get_link_addr(elf_bf_Sym *sym)
 {
-  if (sym) {
+  if (sym && (sym->addr)) {
     return (eresi_Addr) &(((Elf64_Sym *)sym->addr)->st_shndx);
   } else {
     return 0;

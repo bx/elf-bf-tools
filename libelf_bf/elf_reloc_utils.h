@@ -18,32 +18,9 @@
    OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
    SOFTWARE.
 */
+#ifndef __ELF_RELOC_UTILS_H
+#define __ELF_RELOC_UTILS_H
 
-#include <stdio.h>
-#include "elf_bf_utils.h"
-#include "elf_bf_debug_config.h"
-void create_relas();
+eresi_Addr get_dynent_addr(elfshobj_t *f, u_int type);
 
-int main(int argv, char *argc[])
-{
-
-  if ((argv != 5) && (argv != 6)){
-    fprintf(stderr, "usage: %s <input exec> <out name> <brainfuck source file> <tape length> [debugging config name]\n",argc[0]);
-    exit(-1);
-  }
-
-  char *inexec, *outexec, *bf, *config;
-  unsigned int tapelen = atoi(argc[4]);
-  inexec = argc[1];
-  outexec = argc[2];
-  bf = argc[3];
-  config = argc[5];
-  elf_bf_env_t e;
-  elfutils_setup_env(bf, inexec, outexec, tapelen,
-		     0x5555555688dc, /*ifunc .. __sigsetjmp*/ //we might be able to find this elsewhere in the exectuable's text (at compile time)
-		     &e);
-  compile_bf_instructions(&e);
-  elfutils_save_env(&e);
-  elf_bf_write_debug(&e, config);
-  return 0;
-}
+#endif // ndef __ELF_RELOC_UTILS_H

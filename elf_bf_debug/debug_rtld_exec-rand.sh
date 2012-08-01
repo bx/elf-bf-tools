@@ -19,18 +19,18 @@
 # AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-# SOFTWARE.
+# SOFTWARE..
 
 # first argument is executable to run
 
 ulimit -c unlimited
-
 DIR=${PWD}/..
 GLIBC=${PWD}/eglibc/eglibc-2.13
 echo "set environment C -E -x c-header
+set disable-randomization 0
 python execfile(\"$PWD/elfbfgdb.py\")
-#break do-rel.h:116
-#break _dl_start
+break do-rel.h:116
+break _dl_start
 run --library-path $GLIBC:$GLIBC/nptl:$GLIBC/math:$GLIBC/elf:$GLIBC/dlfcn:$GLIBC/nss:$GLIBC/nis:$GLIBC/rt:$GLIBC/resolv:$GLIBC/crypt:$GLIBC/ntlp:$GLIBC/nplp_db $PWD/$1" > temp.gdb
 
 ${GLIBC}/../root/lib/ld-2.13.so   --library-path \

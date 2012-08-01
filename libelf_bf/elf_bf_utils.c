@@ -18,18 +18,19 @@
    OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
    SOFTWARE.
 */
-
+#include <elf.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <libelfsh.h>
 #include "elf_bf_utils.h"
 #include "elf_bf_ops.h"
+#include "elf_reloc_utils.h"
 #include "reloc.h"
 #include "symtab.h"
 
 void init_tape_pointer(elf_bf_exec_t *env);
 void init_tape_syms(elf_bf_exec_t *env);
-void init_elf_bf_linkmap(elf_bf_link_map_t *l, char *in, char *out, eresi_Addr ifunc, eresi_Addr sladdr);
+void init_elf_bf_linkmap(elf_bf_link_map_t *l, char *in, char *out, eresi_Addr ifunc);
 void fix_dynamic_table(elf_bf_exec_t *env);
 void insert_exec_secs(elf_bf_exec_t *env);
 void elfutils_save_lm(elf_bf_link_map_t *l);
@@ -38,47 +39,42 @@ void init_exec_branch_syms(elf_bf_exec_t *ee);
 unsigned long process_bf_instructions (elf_bf_env_t *e, int countonly, size_t start, size_t end);
 unsigned long bf_rela_count(elf_bf_env_t *e);
 char *read_source(char *file);
-void fixup_branch_start(elf_bf_exec_t *ee, size_t index, size_t diff);
+void fixup_branch_start(elf_bf_exec_t *ee, size_t index, size_t diff, size_t afterend);
 size_t find_branch_start(size_t pos, char *instructions);
 void elfutils_setup_env(char *src,
-			char *execf_in,
-			char *execf_out,
-			int tape_len,
-			eresi_Addr ifunc,
-			eresi_Addr exec_l,
-			eresi_Addr exec_reloc_end,
-			eresi_Addr exec_dt_rela,
-			eresi_Addr exec_dt_relasz,
-			eresi_Addr exec_dt_sym,
-			eresi_Addr exec_dt_jmprel,
-			eresi_Addr exec_dt_pltrelsz,
-			elf_bf_env_t *env)
+                        char *execf_in,
+                        char *execf_out,
+                        int tape_len,
+                        eresi_Addr ifunc,
+                        elf_bf_env_t *env)
 {
   elfsh_Dyn *dyn;
   // open and load exec
   env->e_bf_source = read_source(src);
-  init_elf_bf_linkmap(&(env->e_exec.ee_lm), execf_in, execf_out, ifunc, exec_l);
+  env->e_bf_sourcepath = src;
+  init_elf_bf_linkmap(&(env->e_exec.ee_lm), execf_in, execf_out, ifunc);
   elfshsect_t *bs; //we will pretend this section is our string table
   bs = elfsh_get_section_by_name(env->e_exec.ee_lm.lm_f, ".bss", NULL, NULL, NULL);
   env->e_exec.ee_lm.lm_bss_index = bs->index;
   env->e_exec.ee_tape_len = tape_len;
-  env->e_exec.ee_tape_len = tape_len;
-  env->e_exec.ee_reloc_end = exec_reloc_end;
-  env->e_exec.ee_dt_rela = exec_dt_rela;
-  env->e_exec.ee_dt_relasz = exec_dt_relasz;
-  env->e_exec.ee_dt_rela = exec_dt_rela;
-  env->e_exec.ee_dt_sym = exec_dt_sym;
-  env->e_exec.ee_dt_jmprel = exec_dt_jmprel;
-  env->e_exec.ee_dt_pltrelsz = exec_dt_pltrelsz;
+  //env->e_exec.ee_reloc_end = exec_reloc_end;
+  env->e_exec.ee_dt_rela =  get_dynent_addr(env->e_exec.ee_lm.lm_f, DT_RELA);
+  env->e_exec.ee_dt_relasz = get_dynent_addr(env->e_exec.ee_lm.lm_f, DT_RELASZ);
+  env->e_exec.ee_dt_sym =  get_dynent_addr(env->e_exec.ee_lm.lm_f, DT_SYMTAB);
+  env->e_exec.ee_dt_jmprel =  get_dynent_addr(env->e_exec.ee_lm.lm_f, DT_JMPREL);
+  env->e_exec.ee_dt_pltrelsz = get_dynent_addr(env->e_exec.ee_lm.lm_f, DT_PLTRELSZ);
+
   env->e_exec.ee_ptr_tape_ptr = NULL;
   env->e_exec.ee_tape_ptr = NULL;
+  env->e_exec.ee_ptr_tape_copy = NULL;
   env->e_exec.ee_lm.lm_ifunc = NULL;
-  env->e_exec.ee_tape_copy = NULL;
-  env->e_exec.ee_lm.lm_ifunc = NULL;
+  env->e_exec.ee_exec_map = NULL;
+  env->e_exec.ee_stack_addr = NULL;
+
 
 
   env->e_exec.ee_num_reloc = bf_rela_count(env);
-
+  init_tape_syms(&(env->e_exec)); //first count number of new syms
   insert_exec_secs(&(env->e_exec));
   init_tape_syms(&(env->e_exec));
   fix_dynamic_table(&(env->e_exec));
@@ -94,13 +90,12 @@ elfshobj_t *elfutils_read_elf_file(char *file)
   }
   return eo;
 }
-void init_elf_bf_linkmap(elf_bf_link_map_t *l, char *in, char *out, eresi_Addr ifunc, eresi_Addr sladdr)
+void init_elf_bf_linkmap(elf_bf_link_map_t *l, char *in, char *out, eresi_Addr ifunc)
 {
   l->lm_allocated = 0;
   l->lm_f = elfutils_read_elf_file(in);
   l->lm_out_name = out;
   l->lm_ifunc_addr = ifunc;
-  l->lm_l_s = sladdr;
   l->lm_next_reloc = 0;
 }
 
@@ -161,21 +156,22 @@ char *read_source(char *file)
   size_t pc;
   for (pc = 0; (src[pc] = fgetc(f)) != EOF; pc++) {}
   src[pc] = 0;
-  printf("\"%s\"\n",src);
+  printf("\"%s\"",src);
   fclose(f);
   return src;
 }
-void fixup_branch_start(elf_bf_exec_t *ee, size_t index, size_t diff)
+void fixup_branch_start(elf_bf_exec_t *ee, size_t index, size_t diff, size_t afterend)
 {
   //diff is the number of rela instructions between the start of the
   //first branch statement and the start of the last branch
   elf_bf_Rela r0, r1, next;
   elf_bf_link_map_t *lm = &(ee->ee_lm);
-  reloc_get_reloc_entry(lm, (index - 1) - (diff+2), &r0);
-  reloc_get_reloc_entry(lm, (index - 1) - (diff+1), &r1);
-  reloc_get_reloc_entry(lm, index, &next);
+  //index of first entry in ']'
+  reloc_get_reloc_entry(lm, (index) - (diff+4), &r0);
+  reloc_get_reloc_entry(lm, (index) - (diff+3), &r1);
+  reloc_get_reloc_entry(lm, afterend, &next);
   reloc_set_reladdend(&r0, next.addr);
-  reloc_set_reladdend(&r1, ee->ee_dt_relasz_value - (index * sizeof(Elf64_Rela)));
+  reloc_set_reladdend(&r1, ee->ee_dt_relasz_value - (afterend * sizeof(Elf64_Rela)));
 }
 void fixup_branch_end(elf_bf_exec_t *ee, size_t index, size_t diff)
 {
@@ -194,11 +190,11 @@ size_t find_branch_start(size_t pos, char *instructions)
   size_t level = 1;
   for (pos = pos - 1; pos >= 0; pos--) {
     if (instructions[pos] == ']') {
-	level++;
+        level++;
     }else if (instructions[pos] == '[') {
       level--;
       if (level == 0){
-	break;
+        break;
       }
     }
   }
@@ -223,11 +219,17 @@ unsigned long process_bf_instructions (elf_bf_env_t *e, int countonly, size_t st
   }else{
     start = 0;
     end = 0;
+
   }
-  count += init_scatch_space(ee);
+  if (end == 0) { //only if we are totaling everything
+    count += init_scatch_space(ee);
+  }
   //if end == 0, then count until the end
-  for (i=start+count; ((c = e->e_bf_source[i]) != 0) && ((end==0) || (i<end));
+  //printf("start %d, count %d, end %d\n", start, count, end);
+
+  for (i=start; ((c = e->e_bf_source[i]) != 0) && ((end==0) || (i<end));
        i++) {
+    //printf("count  %d before '%c'\n", count, c);
     switch (c) {
     case '+':
       count = count+elfops_increment(ee);
@@ -248,12 +250,13 @@ unsigned long process_bf_instructions (elf_bf_env_t *e, int countonly, size_t st
       oldcount = count;
       count = count+elfops_branch_end(ee);
       if (! countonly) {
-	start = find_branch_start(i,e->e_bf_source);
-	size_t diff;
-	diff = process_bf_instructions(e,1,start+1,i+1);
-	fixup_branch_start(ee,count,diff);
-	diff = process_bf_instructions(e,1,start+1,i);
-	fixup_branch_end(ee,oldcount,diff);
+        start = find_branch_start(i,e->e_bf_source);
+        size_t diff;
+        diff = process_bf_instructions(e,1,start+1,i);
+        //printf("diff %d, start %d, i %d\n", diff, start, i);
+        fixup_branch_start(ee,oldcount,diff, count);
+        diff = process_bf_instructions(e,1,start, i);
+        fixup_branch_end(ee,oldcount,diff);
       }
       break;
     case 'X':
@@ -270,27 +273,11 @@ unsigned long process_bf_instructions (elf_bf_env_t *e, int countonly, size_t st
   }
 
   if (countonly) {
-    printf("%lu instructions\n",count);
+    //printf("%lu instructions\n",count);
     ee->ee_lm.lm_next_reloc = next_reloc;
     ee->ee_lm.lm_allocated = allocated;
   }
   return count;
-}
-
-void *alloc_clean(size_t s)
-{
-  void *addr;
-  addr = malloc(s);
-  if (! addr) {
-    fprintf(stderr,"ERROR alloc/mallocing size %d\n", s);
-    exit(-1);
-  }
-  addr = memset(addr,'\0',s);
-  if (! addr) {
-    fprintf(stderr,"ERROR alloc/cleaning size %d\n", s);
-    exit(-1);
-  }
-  return addr;
 }
 
 elfshsect_t *insert_reloc_sec(elfshobj_t *f, eresi_Addr numrel, elfshsect_t *newsym)
@@ -301,8 +288,8 @@ elfshsect_t *insert_reloc_sec(elfshobj_t *f, eresi_Addr numrel, elfshsect_t *new
 
 
   //alloc space for new sections
-  rels = (char *) alloc_clean(sizeof(Elf64_Rela)*numrel);
-  hdrrel = (elfsh_Shdr *) alloc_clean(sizeof(elfsh_Shdr));
+  rels = (char *) calloc(numrel, sizeof(Elf64_Rela));
+  hdrrel = (elfsh_Shdr *) calloc(1, sizeof(elfsh_Shdr));
 
 
   /* Create the section descriptor (ESD) */
@@ -337,8 +324,8 @@ elfshsect_t *insert_symtab_sec(elfshobj_t *f, eresi_Addr numsym, eresi_Addr strt
   elfsh_Shdr *hdrsym;
   elfshsect_t *newsym;
 
-  syms = (char *) alloc_clean(sizeof(Elf64_Sym)*numsym);
-  hdrsym = (elfsh_Shdr *) alloc_clean(sizeof(elfsh_Shdr));
+  syms = (char *) calloc(numsym, sizeof(Elf64_Sym));
+  hdrsym = (elfsh_Shdr *) calloc(1, sizeof(elfsh_Shdr));
 
   newsym = elfsh_create_section(".sym.p");
   if (!newsym) {
@@ -392,9 +379,11 @@ void insert_exec_secs(elf_bf_exec_t *env)
   elfshsect_t *sec, *str;
   sec = elfsh_get_section_by_name(env->ee_lm.lm_f, ".dynsym", NULL, NULL, NULL);
 
-  str = elfsh_get_section_by_name(env->ee_lm.lm_f, ".dynstr", NULL, NULL, NULL);
-  env->ee_num_used_syms = elfsh_get_section_size(sec->shdr)/sizeof(Elf64_Sym);
-  env->ee_lm.lm_sym = insert_symtab_sec(env->ee_lm.lm_f, 4 + env->ee_num_used_syms  + env->ee_tape_len, str->index);
+  //str = elfsh_get_section_by_name(env->ee_lm.lm_f, ".dynstr", NULL, NULL, NULL);
+  env->ee_num_orig_syms = elfsh_get_section_size(sec->shdr)/sizeof(Elf64_Sym);
+  env->ee_num_used_syms = env->ee_num_orig_syms;
+
+  env->ee_lm.lm_sym = insert_symtab_sec(env->ee_lm.lm_f, env->ee_num_new_syms + env->ee_num_used_syms  + env->ee_tape_len, elfsh_get_section_link(sec->shdr));
   elfsh_set_section_type(sec->shdr, SHT_NULL);
 
   copy_dynsym(env);
@@ -429,50 +418,66 @@ void elfutils_save_env(elf_bf_env_t *env)
   elfutils_save_lm(&(env->e_exec.ee_lm));
 }
 
+//just cont number of symbols if lm_allocated is false
 void init_tape_syms(elf_bf_exec_t *env)
 {
-  elf_bf_Sym *sym, *psym, *ifunc, *branch, *tapecpy;
+
+  elf_bf_Sym *sym, *psym, *ifunc, *execmap, *ptrtapecpy, *stackaddr;
   elf_bf_Sym top;
-
-  psym = alloc_clean(sizeof(elf_bf_Sym));
-  sym = alloc_clean(sizeof(elf_bf_Sym));
-  tapecpy = alloc_clean(sizeof(elf_bf_Sym));
-  ifunc = (elf_bf_Sym *) alloc_clean(sizeof(elf_bf_Sym));
-  //branch = (elf_bf_Sym *) alloc_clean(sizeof(elf_bf_Sym));
-
-  eresi_Addr index = env->ee_num_used_syms++;
+  if (env->ee_lm.lm_allocated){
+    psym = calloc(1, sizeof(elf_bf_Sym));
+    sym = calloc(1, sizeof(elf_bf_Sym));
+    ptrtapecpy = calloc(1, sizeof(elf_bf_Sym));
+    ifunc = calloc(1, sizeof(elf_bf_Sym));
+    execmap = calloc(1, sizeof(elf_bf_Sym));
+    stackaddr = calloc(1, sizeof(elf_bf_Sym));
+  }
+  eresi_Addr index = env->ee_num_used_syms;
+  //index++;
+  //printf("index: %d\n", index);
   //symtab_get_sym(&(env->ee_lm), index++, nsym);
   symtab_get_sym(&(env->ee_lm), index++, psym);
   symtab_get_sym(&(env->ee_lm), index++, sym);
   symtab_get_sym(&(env->ee_lm), index++, ifunc);
-  //symtab_get_sym(&(env->ee_lm), index++, branch);
-  symtab_get_sym(&(env->ee_lm), index, tapecpy);
-  env->ee_num_used_syms = index;
-  symtab_get_sym(&(env->ee_lm), index+1, &top);
+  symtab_get_sym(&(env->ee_lm), index++, ptrtapecpy);
+  symtab_get_sym(&(env->ee_lm), index++, execmap);
+  symtab_get_sym(&(env->ee_lm), index, stackaddr);
+  if (env->ee_lm.lm_allocated){
+    env->ee_num_used_syms = index;
 
-  //for(;index < env->ee_num_used_syms+env->ee_tape_len
+    symtab_get_sym(&(env->ee_lm), index+1, &top);
+
+    //keeps the tape head symbol number
+
+    //address of where tape head is pointing's value
+    symtab_set_sym(psym, 1, top.addr, STT_FUNC);
+
+    //assume tape head value is zero
+    symtab_set_sym(sym, 1, 0, STT_FUNC);
+    symtab_set_sym(ifunc, 8, 0, STT_GNU_IFUNC);
+    //elfsh_set_symbol_link(ifunc->sym, 1);
+    symtab_set_sym(ptrtapecpy, 1, symtab_get_value_addr(sym), STT_FUNC);
+
+    //start it up with address of PLTGOT
+    elfsh_Dyn *dyn;
+    eresi_Addr pltgot;
+    dyn = elfsh_get_dynamic_entry_by_type(env->ee_lm.lm_f, DT_PLTGOT);
+    pltgot = elfsh_get_dynentry_val(dyn);
+    env->ee_dt_pltgot = pltgot+8;
+    symtab_set_sym(execmap, 8, pltgot+8, STT_FUNC);
 
 
+    symtab_set_sym(stackaddr, 8, 0, STT_FUNC);
 
-  //keeps the tape head symbol number
-  //symtab_set_sym(nsym, 4, psym->index, STT_FUNC);
- //address of where tape head is pointing's value
-  symtab_set_sym(psym, 1, top.addr, STT_FUNC);
-
-  //assume tape head value is zero
-  symtab_set_sym(sym, 1, 0, STT_FUNC);
-  symtab_set_sym(ifunc, 8, env->ee_lm.lm_ifunc_addr, STT_GNU_IFUNC);
-  //elfsh_set_symbol_link(ifunc->sym, 1);
-  //symtab_set_sym(branch, 8, env->ee_lm.lm_ifunc_addr, STT_FUNC);
-  symtab_set_sym(tapecpy, 1, symtab_get_value_addr(sym), STT_FUNC);
-
-  //env->ee_tape_symnum = psym->index;
-  env->ee_ptr_tape_ptr = psym;
-  env->ee_tape_ptr = sym;
-  env->ee_lm.lm_ifunc = ifunc;
-  //env->ee_branch_location = branch;
-  env->ee_tape_copy = tapecpy;
-
+    //env->ee_tape_symnum = psym->index;
+    env->ee_ptr_tape_ptr = psym;
+    env->ee_tape_ptr = sym;
+    env->ee_lm.lm_ifunc = ifunc;
+    env->ee_ptr_tape_copy = ptrtapecpy;
+    env->ee_exec_map = execmap;
+    env->ee_stack_addr = stackaddr;
+  }
+  env->ee_num_new_syms = index - env->ee_num_used_syms;
 }
 
 

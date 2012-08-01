@@ -20,11 +20,8 @@ assumes that this script has been sucessfully run/ping was sucessfully built.
 ping_backdoor makes a copy of this version of ping, adds relocation entries and
 symbols, and writes the new version of ping to the ping_backdoor directory.
 
-ping_backdoor.c currently assumes you link it against the eglibc build from
-source.  If ping crashes when it is exeucted, it is probably because you need to
-tweak the offsets the relocation entries add to compute the address to jump to.
-Future versions on this can fix this automatically, but for now you need to edit
-ping_backdoor.c and recompile.
+To build the backdoored ping, after building ping_backdoor, run
+build_backdoor.sh. It looks up the path of libc that ping appears to use and passes that information to ping_backdoor so that the backdoor gets setup correctly.
 
 RUN
 The backdoored version of ping only is triggered when ping is run with the -t

@@ -95,15 +95,24 @@ void reloc_set_rela(elf_bf_Rela *r, Elf64_Word type, Elf64_Word sym, Elf64_Addr 
 
 eresi_Addr reloc_get_offset_addr(elf_bf_Rela *rel)
 {
-  if (rel) {
+  if (rel && (rel->addr)) {
     return (eresi_Addr) &(((Elf64_Rela *)rel->addr)->r_offset);
+  } else {
+    return 0;
+  }
+}
+
+eresi_Addr reloc_get_offset(elf_bf_Rela *rel)
+{
+  if (rel && (rel->rel)) {
+    return rel->rel->r_offset;
   } else {
     return 0;
   }
 }
 eresi_Addr reloc_get_addend_addr(elf_bf_Rela *rel)
 {
-  if (rel) {
+  if (rel && (rel->addr)) {
     return (eresi_Addr) &(((Elf64_Rela *)rel->addr)->r_addend);
   } else {
     return 0;
@@ -111,7 +120,7 @@ eresi_Addr reloc_get_addend_addr(elf_bf_Rela *rel)
 }
 eresi_Addr reloc_get_symnum_addr(elf_bf_Rela *rel)
 {
-  if (rel) {
+  if (rel && (rel->addr)) {
     return (eresi_Addr) &(((Elf64_Rela *)rel->addr)->r_info) + 4;
   } else {
     return 0;

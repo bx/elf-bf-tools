@@ -28,6 +28,10 @@
 #include "symtab.h"
 
 typedef struct {
+
+} elf_bf_Rela_def;
+
+typedef struct {
   elfsh_Rela *rel;
   eresi_Addr addr;
 } elf_bf_Rela;
@@ -49,5 +53,5 @@ eresi_Addr reloc_get_offset_addr(elf_bf_Rela *rel);
 eresi_Addr reloc_get_addend_addr(elf_bf_Rela *rel);
 eresi_Addr reloc_get_symnum_addr(elf_bf_Rela *rel);
 eresi_Addr reloc_get_addr(elf_bf_Rela *r);
-
+eresi_Addr reloc_get_offset(elf_bf_Rela *rel);
 #endif //ifdef __RELOC_H

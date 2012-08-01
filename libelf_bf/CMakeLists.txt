@@ -1,5 +1,3 @@
-<<<<<<< HEAD
-
 # Copyright (c) 2012 Rebecca (bx) Shapiro
 
 # Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -20,6 +18,4 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-=======
->>>>>>> c7b9099... moved to cmake
-add_library(elf_bf STATIC elf_bf_link_map.c elf_bf_ops.c elf_bf_utils.c reloc.c symtab.c)
+add_library(elf_bf STATIC elf_bf_link_map.c elf_bf_ops.c elf_bf_utils.c elf_reloc_utils.c reloc.c symtab.c elf_bf_debug_config.c)

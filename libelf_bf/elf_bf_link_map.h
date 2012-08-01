@@ -36,4 +36,5 @@ eresi_Addr get_l_buckets(eresi_Addr l);
 eresi_Addr get_l_libname_next(eresi_Addr l);
 eresi_Addr get_l_direct_opencount(eresi_Addr l);
 eresi_Addr get_l_next(eresi_Addr l);
+
 #endif //ifdef __ELF_BF_LINK_MAP_H

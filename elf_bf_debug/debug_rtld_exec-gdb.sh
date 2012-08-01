@@ -25,28 +25,28 @@
 
 ulimit -c unlimited
 
-DIR=${PWD}/..
-GLIBC=${PWD}/eglibc/eglibc-2.13
+GLIBC=$PWD/eglibc/eglibc-2.13
 echo "set environment C -E -x c-header
 python execfile(\"$PWD/elfbfgdb.py\")
-#break do-rel.h:116
-#break _dl_start
+break do-rel.h:116
+break _dl_start
 run --library-path $GLIBC:$GLIBC/nptl:$GLIBC/math:$GLIBC/elf:$GLIBC/dlfcn:$GLIBC/nss:$GLIBC/nis:$GLIBC/rt:$GLIBC/resolv:$GLIBC/crypt:$GLIBC/ntlp:$GLIBC/nplp_db $PWD/$1" > temp.gdb
 
-${GLIBC}/../root/lib/ld-2.13.so   --library-path \
-${GLIBC}:\
-${GLIBC}/math:\
-${GLIBC}/elf:\
-${GLIBC}/dlfcn:\
-${GLIBC}/nss:\
-${GLIBC}/nis:\
-${GLIBC}/rt:\
-${GLIBC}/resolv:\
-${GLIBC}/crypt:\
-${GLIBC}/nptl:\
-${GLIBC}/nptl_db:\
+$GLIBC/../root/lib/ld-2.13.so   --library-path \
+$GLIBC:\
+$GLIBC/math:\
+$GLIBC/elf:\
+$GLIBC/dlfcn:\
+$GLIBC/nss:\
+$GLIBC/nis:\
+$GLIBC/rt:\
+$GLIBC/resolv:\
+$GLIBC/crypt:\
+$GLIBC/nptl:\
+$GLIBC/nptl_db:\
 /lib/:\
 /usr/lib/x86_64-linux-gnu/:\
 /lib/x86_64-linux-gnu/:\
 /usr/lib/: \
-/usr/bin/ddd -x ${PWD}/temp.gdb -d ${GLIBC}  ${GLIBC}/../build/elf/ld.so
+/usr/bin/gdb -x $PWD/temp.gdb -d $GLIBC  $GLIBC/../build/elf/ld.so
+#/home/bx/software/gdb-7.4/gdb/gdb -x ${PWD}/temp.gdb -d $GLIBC  $GLIBC/../build/elf/ld.so
