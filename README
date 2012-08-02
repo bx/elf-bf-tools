@@ -11,6 +11,9 @@ This project contains tools that can be used to coarse the gcc's runtime loader
 into performing interesing operations using only valid relocation entires and
 symbols.
 
+Slides from our DEFCON 20 talk can be found here:
+http://www.cs.dartmouth.edu/~bx/elf-bf-tools/slides/elf-defcon20.pdf
+
 Slides from our BerlinSides0x3 talk can be found here:
 http://www.cs.dartmouth.edu/~bx/elf-bf-tools/slides/ELF-berlinsides-0x3.pdf
 
