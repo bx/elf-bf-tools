@@ -30,7 +30,7 @@
 
 void init_tape_pointer(elf_bf_exec_t *env);
 void init_tape_syms(elf_bf_exec_t *env);
-void init_elf_bf_linkmap(elf_bf_link_map_t *l, char *in, char *out, eresi_Addr ifunc);
+void init_elf_bf_linkmap(elf_bf_link_map_t *l, char *in, char *out);
 void fix_dynamic_table(elf_bf_exec_t *env);
 void insert_exec_secs(elf_bf_exec_t *env);
 void elfutils_save_lm(elf_bf_link_map_t *l);
@@ -42,17 +42,24 @@ char *read_source(char *file);
 void fixup_branch_start(elf_bf_exec_t *ee, size_t index, size_t diff, size_t afterend);
 size_t find_branch_start(size_t pos, char *instructions);
 void elfutils_setup_env(char *src,
-                        char *execf_in,
-                        char *execf_out,
-                        int tape_len,
-                        eresi_Addr ifunc,
-                        elf_bf_env_t *env)
+			char *execf_in,
+			char *execf_out,
+			int tape_len,
+			eresi_Addr ifuncoffset,
+			eresi_Addr dl_auxv, // offset of _dl_auxv (in ld.so's data)
+			eresi_Addr endoffset, // offset of &end on stack from where auxv lives on stack (value of _dl_auxv)
+			int debug,
+			elf_bf_env_t *env)
 {
   elfsh_Dyn *dyn;
   // open and load exec
   env->e_bf_source = read_source(src);
   env->e_bf_sourcepath = src;
-  init_elf_bf_linkmap(&(env->e_exec.ee_lm), execf_in, execf_out, ifunc);
+  env->e_exec.ee_ifunc_offset = ifuncoffset;
+  env->e_exec.ee_dl_auxv = dl_auxv;
+  env->e_exec.ee_end_offset = endoffset;
+  env->e_exec.ee_for_debug = debug;
+  init_elf_bf_linkmap(&(env->e_exec.ee_lm), execf_in, execf_out);
   elfshsect_t *bs; //we will pretend this section is our string table
   bs = elfsh_get_section_by_name(env->e_exec.ee_lm.lm_f, ".bss", NULL, NULL, NULL);
   env->e_exec.ee_lm.lm_bss_index = bs->index;
@@ -90,12 +97,12 @@ elfshobj_t *elfutils_read_elf_file(char *file)
   }
   return eo;
 }
-void init_elf_bf_linkmap(elf_bf_link_map_t *l, char *in, char *out, eresi_Addr ifunc)
+void init_elf_bf_linkmap(elf_bf_link_map_t *l, char *in, char *out)
 {
   l->lm_allocated = 0;
   l->lm_f = elfutils_read_elf_file(in);
   l->lm_out_name = out;
-  l->lm_ifunc_addr = ifunc;
+  //l->lm_ifunc_addr = ifunc;
   l->lm_next_reloc = 0;
 }
 
@@ -190,11 +197,11 @@ size_t find_branch_start(size_t pos, char *instructions)
   size_t level = 1;
   for (pos = pos - 1; pos >= 0; pos--) {
     if (instructions[pos] == ']') {
-        level++;
+	level++;
     }else if (instructions[pos] == '[') {
       level--;
       if (level == 0){
-        break;
+	break;
       }
     }
   }
@@ -250,13 +257,13 @@ unsigned long process_bf_instructions (elf_bf_env_t *e, int countonly, size_t st
       oldcount = count;
       count = count+elfops_branch_end(ee);
       if (! countonly) {
-        start = find_branch_start(i,e->e_bf_source);
-        size_t diff;
-        diff = process_bf_instructions(e,1,start+1,i);
-        //printf("diff %d, start %d, i %d\n", diff, start, i);
-        fixup_branch_start(ee,oldcount,diff, count);
-        diff = process_bf_instructions(e,1,start, i);
-        fixup_branch_end(ee,oldcount,diff);
+	start = find_branch_start(i,e->e_bf_source);
+	size_t diff;
+	diff = process_bf_instructions(e,1,start+1,i);
+	//printf("diff %d, start %d, i %d\n", diff, start, i);
+	fixup_branch_start(ee,oldcount,diff, count);
+	diff = process_bf_instructions(e,1,start, i);
+	fixup_branch_end(ee,oldcount,diff);
       }
       break;
     case 'X':

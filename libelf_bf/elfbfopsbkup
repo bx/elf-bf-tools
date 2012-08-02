@@ -170,23 +170,33 @@ eresi_Addr init_scatch_space(elf_bf_exec_t *ee)
   //get linkmap value
   set_next_reloc(l, R_X86_64_COPY, symtab_get_index(ee->ee_exec_map), symtab_get_value_addr(ee->ee_exec_map), 0);
 
-  //get address of base of ld then stack addr (ee_stac_addr)
-  set_next_reloc(l, R_X86_64_64, symtab_get_index(ee->ee_exec_map), symtab_get_value_addr(ee->ee_stack_addr), get_l_next(0)); //calculate l_next address location
-  set_next_reloc(l, R_X86_64_COPY, symtab_get_index(ee->ee_stack_addr), symtab_get_value_addr(ee->ee_stack_addr), 0); //calculate l_next address location
+  if (  ee->ee_for_debug ) { //linkmap structure for exec is at end if using debugger
+    //get address of base of ld then stack addr (ee_stac_addr)
+    set_next_reloc(l, R_X86_64_64, symtab_get_index(ee->ee_exec_map), symtab_get_value_addr(ee->ee_stack_addr), get_l_next(0)); //calculate l_next address location
+    set_next_reloc(l, R_X86_64_COPY, symtab_get_index(ee->ee_stack_addr), symtab_get_value_addr(ee->ee_stack_addr), 0); //calculate l_next address location
 
-  //get address of base of ld then stack addr (ee_stac_addr)
-  set_next_reloc(l, R_X86_64_64, symtab_get_index(ee->ee_exec_map), symtab_get_value_addr(ee->ee_stack_addr), get_l_next(0)); //calculate l_next address location
-  set_next_reloc(l, R_X86_64_COPY, symtab_get_index(ee->ee_stack_addr), symtab_get_value_addr(ee->ee_stack_addr), 0); //calculate l_next address location
+    //get address of base of ld then stack addr (ee_stac_addr)
+    set_next_reloc(l, R_X86_64_64, symtab_get_index(ee->ee_exec_map), symtab_get_value_addr(ee->ee_stack_addr), get_l_next(0)); //calculate l_next address location
+    set_next_reloc(l, R_X86_64_COPY, symtab_get_index(ee->ee_stack_addr), symtab_get_value_addr(ee->ee_stack_addr), 0); //calculate l_next address location
 
-  //get address of base of ld then stack addr (ee_stac_addr)
-  set_next_reloc(l, R_X86_64_64, symtab_get_index(ee->ee_stack_addr), symtab_get_value_addr(ee->ee_stack_addr), get_l_next(0)); //calculate l_next  address location
-  set_next_reloc(l, R_X86_64_COPY, symtab_get_index(ee->ee_stack_addr), symtab_get_value_addr(ee->ee_stack_addr), 0);
-
+    //get address of base of ld then stack addr (ee_stac_addr)
+    set_next_reloc(l, R_X86_64_64, symtab_get_index(ee->ee_stack_addr), symtab_get_value_addr(ee->ee_stack_addr), get_l_next(0)); //calculate l_next address location
+    set_next_reloc(l, R_X86_64_COPY, symtab_get_index(ee->ee_stack_addr), symtab_get_value_addr(ee->ee_stack_addr), 0);
+  }
   //get address of base of ld then stack addr (ee_stac_addr)
   set_next_reloc(l, R_X86_64_64, symtab_get_index(ee->ee_stack_addr), symtab_get_value_addr(ee->ee_stack_addr), get_l_next(0)); //calculate l_next address location
   set_next_reloc(l, R_X86_64_COPY, symtab_get_index(ee->ee_stack_addr), symtab_get_value_addr(ee->ee_stack_addr), 0);
-
-
+  if ( !ee->ee_for_debug ) { //ld.so is end of linkmap list
+      //get address of base of ld then stack addr (ee_stac_addr)
+  set_next_reloc(l, R_X86_64_64, symtab_get_index(ee->ee_stack_addr), symtab_get_value_addr(ee->ee_stack_addr), get_l_next(0)); //calculate l_next address location
+  set_next_reloc(l, R_X86_64_COPY, symtab_get_index(ee->ee_stack_addr), symtab_get_value_addr(ee->ee_stack_addr), 0);
+  //get address of base of ld then stack addr (ee_stac_addr)
+  set_next_reloc(l, R_X86_64_64, symtab_get_index(ee->ee_stack_addr), symtab_get_value_addr(ee->ee_stack_addr), get_l_next(0)); //calculate l_next address location
+  set_next_reloc(l, R_X86_64_COPY, symtab_get_index(ee->ee_stack_addr), symtab_get_value_addr(ee->ee_stack_addr), 0);
+  //get address of base of ld then stack addr (ee_stac_addr)
+  set_next_reloc(l, R_X86_64_64, symtab_get_index(ee->ee_stack_addr), symtab_get_value_addr(ee->ee_stack_addr), get_l_next(0)); //calculate l_next address location
+  set_next_reloc(l, R_X86_64_COPY, symtab_get_index(ee->ee_stack_addr), symtab_get_value_addr(ee->ee_stack_addr), 0);
+  }
   set_next_reloc(l, R_X86_64_COPY, symtab_get_index(ee->ee_stack_addr), symtab_get_value_addr(ee->ee_stack_addr), 0);
 
 

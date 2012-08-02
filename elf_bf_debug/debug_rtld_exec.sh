@@ -23,6 +23,11 @@
 
 # first argument is executable to run
 
+if [ $# -lt 2 ]; then
+    echo "Usage: $0 <executable>"
+    exit -1
+fi
+
 ulimit -c unlimited
 
 DIR=${PWD}/..

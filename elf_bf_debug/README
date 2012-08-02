@@ -19,17 +19,39 @@ run debug_rtld_exec.sh <path to executable> to debug the runtime loader as it
 runs that executable.  It also loads a set of tools that can be used to inspect
 a Brainfuck stack.  The following commands are available
 
-elfbf set_tape <address>
-   -This must always be run.  The last argument is the address of the symbol that holds the address of where the tape pointer is currently pointing.
+elfbf setup <path to debug info>
+   -This must always be run before any other debugging comand, the debug info is the file generated from elf_bf_compiler
 
-elfbf print_current_entry
-   -prints the current tape entry's value
+elfbf tape
+   -prints the entire tape
 
-elfbf print_entry <num>
-  -prints entry at tape slot # <num>
+elfbf tape_range <low> <high>
+   -prints the values on the tape between indices <low> and <high>
 
-elfbf get_tape_index
-   -prints the index of the slot on the tape where the tape pointer is currently pointing
+elfbf tape_value
+   -prints the value the tape pointer is pointing to
 
-elfbf print_tape_range <low> <high>
-   -prints the values on the tape from <low> to <high>, not including <high>
+elfbf tape_value_relative <index>
+   -prints the value on the tape that is <index> hops away from where the tape pointer is pointing
+
+elfbf tape_index
+   -prints the current index in which the tape pointer is ponting
+
+elfbf source
+   -prints the bringfuck source
+
+elfbf current_ins
+   -prints the intruction and index of instruction that is currently being processed
+
+elfbf go_to_next_ins:
+   -processes relocation entries until it reaches entries for the next instruction
+
+elfbf go_to_next_rel:
+   -finishes processing the current relocation entry/begins processing the next
+
+elfbf rel_num
+   -prints the index of the relocation entry currently being processed
+
+NOTE:
+debug_rtld_exec-gdb.sh is the same as debug_rtld_exec.sh execpt it uses gdb rather than dd
+debug_rtld_exec-rand.sh is the same as debug_rtld_exec.sh exectp it enables ASLR

@@ -55,10 +55,13 @@ typedef struct {
   eresi_Addr ee_dt_pltrelsz;
   eresi_Addr ee_dt_pltgot;
   eresi_Addr ee_dt_pltrelsz_value;
-
+  eresi_Addr ee_ifunc_offset; // offset of ifunc (in ld.so) that returns 0
+  eresi_Addr ee_dl_auxv; // offset of _dl_auxv (in ld.so's data)
+  eresi_Addr ee_end_offset; // offset of &end on stack from where auxv lives on stack (value of _dl_auxv)
   //elfsh_Word ee_relacount_orig;
   elfsh_Word ee_sym_orig;
   eresi_Addr ee_dt_gnu_hash; //GNU_HASH entry in dynamic table
+  int ee_for_debug; // 1 if should be compiled to work in a debugger, 0 OW
 } elf_bf_exec_t;
 
 typedef struct {
@@ -69,11 +72,14 @@ typedef struct {
 
 
 void elfutils_setup_env(char *src,
-                        char *execf_in,
-                        char *execf_out,
-                        int tape_len,
-                        eresi_Addr ifunc,
-                        elf_bf_env_t *env);
+			char *execf_in,
+			char *execf_out,
+			int tape_len,
+			eresi_Addr ifuncoffset,
+			eresi_Addr dl_auxv, // offset of _dl_auxv (in ld.so's data)
+			eresi_Addr endoffset, // offset of &end on stack from where auxv lives on stack (value of _dl_auxv)
+			int debug,
+			elf_bf_env_t *env);
 
 void elfutils_save_env (elf_bf_env_t *env);
 void compile_bf_instructions(elf_bf_env_t *e);

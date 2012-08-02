@@ -1,0 +1,42 @@
+Copyright (c) 2012 Rebecca (bx) Shapiro
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+
+This is the README for the elf_bf_compiler directory.
+
+
+This directory contains source code for the brainfuck to ELF metadata
+compiler. The README in the parent directory contains build instructions.
+
+_Getting Started_
+-compile_demo.sh
+compile_demo.sh will help you get started with the bf to ELF metadata compiler.
+1. Be sure ../demo/demo has been build
+2. Create a file containing brainfuck source. We will assume you called it test.bf
+3. Run ./compile_demo.sh test.bf
+4. Now ./demo contains the crafted metadata to execute the instructions in test.bf
+
+-compile_demo_gdb.sh is the same as compile_demo.sh except it invokes the compiler inside gdb for debugging.
+
+_More advanced BF Compilation_
+-elf_bf_compiler
+Once you build elf_bf_compiler you will allow you to compile brainfuck source into arbitrary executables.
+
+USAGE:
+   ./elf_bf_compiler <path to input executable> <where to write output executable> <path to brainfuck source> <tape length (# symbols)> <optional: [file to write debugger info to] [offset of ifunc that returns 0 from ld.so base]  [offset of _dl_auxv from ld.so base] [offset of &end from _dl_auxv]>
+   - the defaults offsets consistently work with our setup, you may need to tweak them to get them working with your libraries.
+   - if any offset is provided, all offsets must be provided
+
+NOTES:
+- if elf_bf_compiler expects its executable will be run in a debugger (if debug config name is specified), it needs to set things up differently (the stack layout differs)
+- elf_bf_compiler assumes that your executable uses the same basic set of libraries as demo. There is no way for a user to easily adjust this yet.
+
+FUTURE WORK:
+- allow the user to configure the compiler to work with a binary that uses more libraries than ../demo/demo uses
+- let the compiler figure out the number of libraries that will be loaded for the executable on the fly so everything works automatically
+- (maybe) write debugger scripts that automatically determine the offsets we need

@@ -21,7 +21,9 @@ ping_backdoor makes a copy of this version of ping, adds relocation entries and
 symbols, and writes the new version of ping to the ping_backdoor directory.
 
 To build the backdoored ping, after building ping_backdoor, run
-build_backdoor.sh. It looks up the path of libc that ping appears to use and passes that information to ping_backdoor so that the backdoor gets setup correctly.
+build_backdoor.sh. It looks up the path of libc that ping appears to use and
+passes that information to ping_backdoor so that the backdoor gets setup
+correctly.
 
 RUN
 The backdoored version of ping only is triggered when ping is run with the -t
