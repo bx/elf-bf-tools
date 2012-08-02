@@ -117,8 +117,6 @@ eresi_Addr elfops_branch_start(elf_bf_exec_t *ee)
 
   //sets end to zero or ifunc, depending on link value of sym1 set earlier
   set_end_ifunc(ee);
-  //set_next_reloc(l, R_X86_64_64, symtab_get_index(ee->ee_lm.lm_ifunc),
-  //ee->ee_reloc_end,0);
 
   //unconditional branch past ] (if tape is zero)
   //update dt_rela (addend to be filled in once ] is known)
@@ -141,27 +139,11 @@ eresi_Addr elfops_branch_start(elf_bf_exec_t *ee)
   return l->lm_next_reloc - start;
 }
 
-/*
-eresi_Addr elfops_unconditional_restart(elf_bf_exec_t *ee)
-{
-  elf_bf_link_map_t *l = &(ee->ee_lm);
-  eresi_Addr start = l->lm_next_reloc;
-
-
-  elfops_prepare_branch(ee);
-
-  set_next_reloc(l, R_X86_64_RELATIVE, 0, ee->ee_reloc_end, 0); //force branch
-
-  return l->lm_next_reloc - start;
-  }*/
-
 eresi_Addr init_scatch_space(elf_bf_exec_t *ee)
 {
   elf_bf_link_map_t *l = &(ee->ee_lm);
   eresi_Addr start = l->lm_next_reloc;
 
-  //set_next_reloc(l, R_X86_64_RELATIVE, 0, ee->ee_dt_jmprel, 0);
-  //set_next_reloc(l, R_X86_64_RELATIVE, 0, ee->ee_dt_pltrelsz, 0);
 
   //copy new tape value into workspace
   set_next_reloc(l, R_X86_64_COPY, symtab_get_index(ee->ee_ptr_tape_ptr),
@@ -188,8 +170,6 @@ eresi_Addr init_scatch_space(elf_bf_exec_t *ee)
 
 
   set_next_reloc(l, R_X86_64_COPY, symtab_get_index(ee->ee_stack_addr), symtab_get_value_addr(ee->ee_stack_addr), 0);
-
-
 
   // save addess of ROP code that returns 0, ldbase + 0x148DE, (at addr 5555555688de)
   set_next_reloc(l, R_X86_64_64, symtab_get_index(ee->ee_stack_addr), symtab_get_value_addr(ee->ee_lm.lm_ifunc), ee->ee_ifunc_offset); //calculate ifunc addr
@@ -281,7 +261,7 @@ eresi_Addr update_exec_linkmap(elf_bf_exec_t *ee, eresi_Addr offset, eresi_Addr 
   updatei = set_next_reloc(l, 0, 0, 0, 0);
   reloc_get_reloc_entry(l, calculatei, &calculate);
   reloc_get_reloc_entry(l, updatei, &update);
-  //l->lm_next_reloc+=2;
+
   //save value of offset+link_map addr in next relocation entry
   reloc_set_rela(&calculate, R_X86_64_64, symtab_get_index(ee->ee_exec_map), reloc_get_offset_addr(&update), offset);
   reloc_set_rela(&update, R_X86_64_RELATIVE, 0, 0, value);//offset filled in at runtime
@@ -305,7 +285,7 @@ eresi_Addr update_exec_linkmap_offset(elf_bf_exec_t *ee, eresi_Addr offset, eres
   updatei = set_next_reloc(l, 0, 0, 0, 0);
   reloc_get_reloc_entry(l, calculatei, &calculate);
   reloc_get_reloc_entry(l, updatei, &update);
-  //l->lm_next_reloc++;
+
   //save value of offset+link_map addr in next relocation entry
   reloc_set_rela(&calculate, R_X86_64_64, symtab_get_index(ee->ee_exec_map), reloc_get_offset_addr(&update), offset);
   reloc_set_rela(&update, R_X86_64_64, symtab_get_index(ee->ee_exec_map), 0, value);//offset filled in at runtime

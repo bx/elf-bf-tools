@@ -53,5 +53,5 @@ elfbf rel_num
    -prints the index of the relocation entry currently being processed
 
 NOTE:
-debug_rtld_exec-gdb.sh is the same as debug_rtld_exec.sh execpt it uses gdb rather than dd
-debug_rtld_exec-rand.sh is the same as debug_rtld_exec.sh exectp it enables ASLR
+- debug_rtld_exec-rand.sh is the same as debug_rtld_exec.sh exectp it enables ASLR
+- we use ddd because we seem to crash gdb
