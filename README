@@ -40,13 +40,15 @@ http://www.eresi-project.org/
 Their code can be checked out using:
 $> svn checkout http://svn.eresi-project.org/svn/trunk/ eresi
 
+It dosn't matter as to where you save the eresi project.
+
 Next, apply the patch in eresi/eresi.patch. To do so, change into the eresi source directory and
 patch -p0 -i <path to eresi/eresi.patch>
 
 build eresi as follows;
 ./configure --prefix /usr/local --enable-64
 make
-sudo make install64
+sudo make install install64
 
 To build elf-bf-tools, in the elf-bf-tools directory
 > cmake .

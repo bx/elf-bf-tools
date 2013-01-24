@@ -34,6 +34,7 @@ DIR=${PWD}/..
 GLIBC=${PWD}/eglibc/eglibc-2.13
 echo "set environment C -E -x c-header
 python execfile(\"$PWD/elfbfgdb.py\")
+break _dl_start
 set disable-randomization off
 run --library-path $GLIBC:$GLIBC/nptl:$GLIBC/math:$GLIBC/elf:$GLIBC/dlfcn:$GLIBC/nss:$GLIBC/nis:$GLIBC/rt:$GLIBC/resolv:$GLIBC/crypt:$GLIBC/ntlp:$GLIBC/nplp_db $PWD/$1" > temp.gdb
 

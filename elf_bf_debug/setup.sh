@@ -27,6 +27,7 @@ mkdir eglibc
 cd eglibc
 apt-get source eglibc
 sudo apt-get build-dep eglibc
+sudo apt-get install gperf #appears to be needed during eglibc install process
 mkdir root
 mkdir build
 cd build
