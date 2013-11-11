@@ -22,7 +22,7 @@
 set(GLIBC "${CMAKE_SOURCE_DIR}/elf_bf_debug/eglibc/root")
 
 if (EXISTS "${GLIBC}/lib/ld-2.13.so")
-  set(CMAKE_C_FLAGS "-g -Wall -Wl,-dynamic-linker=${GLIBC}/lib/ld-2.13.so -Wl,-R${GLIBC}/lib/ -I${GLIBC}/include -L${GLIBC}/lib")
+   set(CMAKE_C_FLAGS "-g -Wall -Wl,--dynamic-linker=${GLIBC}/lib/ld-2.13.so  -Wl,-R${GLIBC}/lib -L${GLIBC}/lib   -I${GLIBC}/include ")
 else(EXISTS "${GLIBC}/lib/ld-2.13.so")
  set(CMAKE_C_FLAGS "-g -Wall")
 endif(EXISTS "${GLIBC}/lib/ld-2.13.so")

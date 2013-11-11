@@ -5,8 +5,8 @@
 #include "elf_bf_utils.h"
 void get_ins_sizes(elf_bf_exec_t *ee, eresi_Addr *inssz);
 
-typedef enum {i_start, i_inc, i_dec, i_next, i_prev, i_branch_start, i_branch_end, i_exit} elf_bf_instypes;
-char elf_bf_insname [NUMINS] = {'I','+','-','>','<', '[', ']', 'X'};
+typedef enum {i_start, i_inc, i_dec, i_next, i_prev, i_branch_start, i_branch_end, i_getchar, i_putchar, i_exit} elf_bf_instypes;
+char elf_bf_insname [NUMINS] = {'I','+','-','>','<', '[', ']', ',','.','X'};
 void print_debug_config(debug_config_t *config, char *out) {
   FILE *f;
   int i;
@@ -65,6 +65,8 @@ void get_ins_sizes(elf_bf_exec_t *ee, eresi_Addr *inssz)
   inssz[i_prev] = elfops_decrement_ptr(ee);
   inssz[i_branch_start] = elfops_branch_start(ee);
   inssz[i_branch_end] = elfops_branch_end(ee);
+  inssz[i_getchar] = elfops_getchar(ee);
+  inssz[i_putchar] = elfops_putchar(ee);
   inssz[i_exit] = elfops_exit(ee);
   ee->ee_lm.lm_allocated = was_allocated;
   ee->ee_lm.lm_next_reloc = old_next;

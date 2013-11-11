@@ -31,42 +31,38 @@ int main(int argv, char *argc[])
 {
 
   if ((argv < 5)){
-    fprintf(stderr, "usage: %s <input exec> <out name> <brainfuck source file> <tape length> [debugging config name] [offset of ifunc] [offset of _dl_auxv] [offset of end from _dl_auxv]\n",argc[0]);
+    fprintf(stderr, "usage: %s <input exec> <out name> <brainfuck source file> <offset of &end to _dl_auxv>  <where to write debugging information> <tape length>\n",argc[0]);
     exit(-1);
   }
 
   char *inexec, *outexec, *bf, *config;
-  unsigned int tapelen = atoi(argc[4]);
+  unsigned int tapelen = atoi(argc[6]);
   int debug;
   eresi_Addr ifunc = 0x148dc;
   eresi_Addr auxv = 0x21de28;
-  eresi_Addr end = -0x3e0; //this offset differs whether exec is directly invoked or if it loader is directly invoked (which happens when we are debugging stuff)
+  //eresi_Addr end = -0x408; //or -x428? 
+  //eresi_Addr end = -0x388; //or -x428? 
+  //eresi_Addr end = -0x428; // gdb
+  eresi_Addr end = -0x3f8; // no gdb
+  //eresi_Addr end = -0x378; // ddd
   inexec = argc[1];
   outexec = argc[2];
   bf = argc[3];
-  if (6 == argv) {
-    config = argc[5];
-    debug = 1;
-    end = -0x420;
-  } else {
-    debug = 0;
-    config = NULL;
-  }
+  end = strtol(argc[4], NULL, 16);
 
-  if ((9 == argv) || (10 == argv)){
-    int i = 5;
-    if (10 == argv) {
-      i++;
-      config = argc[9];
-      debug = 1;
-      end = -0x420;
-    }
-    ifunc = atoi(argc[i++]);
-    auxv = atoi(argc[i++]);
-    end = atoi(argc[i]);
-  }
+  debug = 1;
+  config = argc[5];
+
+
+  int max = 256;
+  char libc[max];
+  char ld[max];
+  lookup_ld_path(inexec, ld, max);
+  lookup_libc_path(inexec, libc, max);
+  auxv = dl_auxv_offset(ld);
+  ifunc = ret0_offset(ld);
   elf_bf_env_t e;
-  elfutils_setup_env(bf, inexec, outexec, tapelen,
+  elfutils_setup_env(bf, inexec, outexec, libc, tapelen,
 		     ifunc, auxv, end, debug,
 		     &e);
   compile_bf_instructions(&e);
@@ -74,5 +70,6 @@ int main(int argv, char *argc[])
   if ( NULL != debug ) {
     elf_bf_write_debug(&e, config);
   }
+  
   return 0;
 }

@@ -24,18 +24,42 @@
 # saving the version of demo with crafted relocaiton entries into
 # ./demo
 
-if [ $1 ]; then
-    SRC=$1
+ENDOFFSET="-3f8"
+TAPELEN="10"
+SRC=""
+while getopts ":hdl:i:" opt; do
+  case $opt in
+    d)
+      ENDOFFSET="-428"
+      ;;
+    l)
+      TAPELEN=$OPTARG
+     ;;
+    i)
+      SRC=$OPTARG
+    ;;
+    \?)
+      echo "Invalid option: -$OPTARG" >&2
+      echo "usage: $0 -i <branfuck source> [optional: -l <tape length> -d]\n -d to compile binary to run in GDB" >&2
+      ;;
+    h)
+      echo "usage: $0 -i <branfuck source> [optional: -l <tape length> -d]\n -d to compile binary to run in GDB" >&2
+      ;;
+  esac
+done
+
+if [ ! -f "$SRC" ]
+then
+    echo "source file $SRC does not exist\n" >&2
+    exit 1
 else
-    echo "usage: $0 <branfuck source> [optional: tape length]"
+    echo "> $SRC" >&2
 fi
 
-if [ $2 ]; then
-    TAPELEN=$2
-else
-    TAPELEN=10
-fi
 
 # find dir script is located in
 DIR="$( cd -P "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-$DIR/elf_bf_compiler ../demo/demo demo $SRC $TAPELEN demo.debug
+#echo "$DIR/elf_bf_compiler ../demo/demo demo $SRC $TAPELEN demo.debug"
+echo "$DIR/elf_bf_compiler ../demo/demo demo $SRC $ENDOFFSET demo.debug $TAPELEN"
+$DIR/elf_bf_compiler ../demo/demo demo $SRC $ENDOFFSET demo.debug $TAPELEN
+

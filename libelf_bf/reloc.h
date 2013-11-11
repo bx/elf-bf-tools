@@ -27,9 +27,9 @@
 #include <libelfsh.h>
 #include "symtab.h"
 
-typedef struct {
-
-} elf_bf_Rela_def;
+//typedef struct {
+//
+//} elf_bf_Rela_def;
 
 typedef struct {
   elfsh_Rela *rel;

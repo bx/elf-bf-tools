@@ -1,15 +1,12 @@
-#!/bin/bash
-
+#!/bin/sh
 
 # Copyright (c) 2012 Rebecca (bx) Shapiro
-
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
 # in the Software without restriction, including without limitation the rights
 # to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
 # copies of the Software, and to permit persons to whom the Software is
 # furnished to do so, subject to the following conditions:
-
 # The above copyright notice and this permission notice shall be included in all
 # copies or substantial portions of the Software.
 
@@ -21,22 +18,10 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+# this is a wrapper script to make it easy to compile the backdoor
 
-# this file sets up and builds egblic so we can use its debugging symbols
-mkdir eglibc
-cd eglibc
-apt-get source eglibc
-sudo apt-get build-dep eglibc
-sudo apt-get install gperf gdb
-mkdir root
-mkdir build
-cd build
-export CFLAGS="-U_FORTIFY_SOURCE -g -O -fno-stack-protector"
-../eglibc-2.13/configure --prefix=$PWD/../root
-mkdir ../root
-mkdir ../root/etc/
-touch ../root/etc/ld.so.conf
-make -j 8
-make install
-
-
+INPUT=../../demo/demo
+OUTPUT=demo
+LIBC=`ldd $INPUT | grep libc.so.6 | awk '{print $3}'`
+echo "running ./putchar $INPUT $OUTPUT $LIBC"
+./putchar $INPUT $OUTPUT $LIBC

@@ -54,4 +54,4 @@ ${GLIBC}/nptl_db:\
 /usr/lib/x86_64-linux-gnu/:\
 /lib/x86_64-linux-gnu/:\
 /usr/lib/: \
-/usr/bin/ddd -x ${PWD}/temp.gdb -d ${GLIBC}  ${GLIBC}/../build/elf/ld.so
+/usr/bin/gdd -x ${PWD}/temp.gdb -d ${GLIBC}  ${GLIBC}/../build/elf/ld.so

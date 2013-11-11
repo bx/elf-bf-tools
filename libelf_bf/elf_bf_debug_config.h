@@ -2,7 +2,7 @@
 #define _ELF_BF_DEBUF_CONFIG_H
 
 #define FILENAMESZ 256
-#define NUMINS 8
+#define NUMINS 10
 
 #include "symtab.h"
 #include "elf_bf_utils.h"

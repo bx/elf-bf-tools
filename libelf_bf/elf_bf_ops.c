@@ -28,8 +28,11 @@ eresi_Addr elfops_move_ptr(elf_bf_exec_t *e, eresi_Addr delta);
 eresi_Addr elfops_add(elf_bf_exec_t *ee, eresi_Addr delta);
 eresi_Addr elfops_unconditional_restart(elf_bf_exec_t *ee);
 eresi_Addr elfops_prepare_branch(elf_bf_exec_t *ee);
+eresi_Addr elfops_getchar(elf_bf_exec_t *ee);
+eresi_Addr elfops_putchar(elf_bf_exec_t *ee);
 eresi_Addr set_end_ifunc(elf_bf_exec_t *ee);
 eresi_Addr set_end_value(elf_bf_exec_t *ee, eresi_Addr value);
+
 
 eresi_Addr elfops_increment_ptr(elf_bf_exec_t *e)
 {
@@ -54,6 +57,46 @@ eresi_Addr elfops_move_ptr(elf_bf_exec_t *e, eresi_Addr delta)
 		 symtab_get_value_addr(e->ee_tape_ptr), 0);
   return l->lm_next_reloc - start;
  }
+
+
+eresi_Addr elfops_getchar(elf_bf_exec_t *ee)
+{
+  // INCOMPLETE
+  elf_bf_link_map_t *l = &(ee->ee_lm);
+  eresi_Addr start = l->lm_next_reloc;
+
+
+  eresi_Addr savei, getci, findgetci;
+  elf_bf_Rela save, getc, findgetc;
+
+  savei = set_next_reloc(l, 0, 0, 0, 0);
+  findgetci = set_next_reloc(l, 0, 0, 0, 0);
+  getci = set_next_reloc(l, 0, 0, 0, 0);
+  reloc_get_reloc_entry(l, savei, &save);
+  reloc_get_reloc_entry(l, findgetci, &findgetc);
+  reloc_get_reloc_entry(l, getci, &getc);
+
+  // save address of where tape is pointing to to next relocaiton entry's offset
+  reloc_set_rela(&save, R_X86_64_64, symtab_get_index(ee->ee_ptr_tape_copy), reloc_get_offset_addr(&getc), 0);
+
+  // save address of getc to next reloc entry
+  reloc_set_rela(&findgetc, R_X86_64_64, symtab_get_index(l->lm_getchar), reloc_get_addend_addr(&getc), 0);
+  // call getc
+  reloc_set_rela(&getc, R_X86_64_IRELATIVE, 0, 0, 0);
+
+  // copy value of getc result to scratchspace
+  eresi_Addr setupi, updatei;
+  elf_bf_Rela setup, update;
+  setupi = set_next_reloc(l, 0, 0, 0, 0);
+  updatei = set_next_reloc(l, 0, 0, 0, 0);
+  reloc_get_reloc_entry(l, setupi, &setup);
+  reloc_get_reloc_entry(l, updatei, &update);
+  reloc_set_rela(&setup, R_X86_64_64, symtab_get_index(ee->ee_ptr_tape_ptr), reloc_get_offset_addr(&update), 0);
+  reloc_set_rela(&update, R_X86_64_64,symtab_get_index(ee->ee_tape_ptr),0,0);
+  return l->lm_next_reloc - start;
+
+}
+
 
  eresi_Addr elfops_increment(elf_bf_exec_t *e)
  {
@@ -128,14 +171,67 @@ eresi_Addr elfops_branch_start(elf_bf_exec_t *ee)
   //set end to zero to force immediate branch
   landi += set_end_value(ee, 0);
   landi += 1;
-  //fix first entry to it points to last entry
+  //fix first entry so it points to last entry
   reloc_get_reloc_entry(l, firsti, &first);
   reloc_get_reloc_entry(l, sizei, &size);
   reloc_get_reloc_entry(l, landi, &land);
   reloc_set_rela(&first, R_X86_64_RELATIVE, 0, ee->ee_dt_rela,
 		 reloc_get_addr(&land));
-  reloc_set_rela(&size, R_X86_64_RELATIVE, 0, ee->ee_dt_relasz, ee->ee_relasz_orig +  ((landi)*sizeof(Elf64_Rela)));
+  //reloc_set_rela(&size, R_X86_64_RELATIVE, 0, ee->ee_dt_relasz, ee->ee_relasz_orig +  ((landi)*sizeof(Elf64_Rela)));
+  reloc_set_rela(&size, R_X86_64_RELATIVE, 0, ee->ee_dt_relasz, ee->ee_dt_relasz_value -  ((landi)*sizeof(Elf64_Rela)));
 
+  return l->lm_next_reloc - start;
+}
+
+eresi_Addr setup_syscall_symbol(elf_bf_exec_t *ee, elf_bf_Sym *base, elf_bf_Sym *s, eresi_Addr offset)
+{
+  elf_bf_link_map_t *l = &(ee->ee_lm);
+  eresi_Addr start = l->lm_next_reloc;
+
+  // calculate addr of syscall
+  //printf ("SYSCALL\n");
+  set_next_reloc(l, R_X86_64_64, symtab_get_index(base), symtab_get_value_addr(s), offset);//adds offset of exit to libc base addr, stores in symbol's value
+
+  // make symbol be of type ifunc
+  //set_next_reloc(l, R_X86_64_RELATIVE, 0, symtab_get_sym_addr_sym(s), 0x0100000a00000000);
+
+  return l->lm_next_reloc - start;  
+}
+
+eresi_Addr lookup_library_base_addr(elf_bf_exec_t *ee, elf_bf_Sym *sym, char *lib)
+{
+
+  char *command;
+  char *format =  "ldd %s | awk '{print $1;}' | grep -n %s | awk -F : '{print $1;}'";
+  int i, max = 128;
+  char dll[max];
+  int dll_num, num_read;
+  
+  elf_bf_link_map_t *l = &(ee->ee_lm);
+  eresi_Addr start = l->lm_next_reloc;
+
+
+  if ((command = malloc(strlen(format) + strlen(ee->ee_exec_path) + sizeof(lib))) == NULL) {
+    return 0;
+  }
+
+  sprintf(command, format, ee->ee_exec_path, lib);
+  FILE *f = popen(command,"r");
+  num_read = fread(dll, 1, max, f);
+  if (num_read < 1) {
+    return 0;
+  }
+  dll_num = atoi(dll);
+
+  //get linkmap value
+  set_next_reloc(l, R_X86_64_COPY, symtab_get_index(ee->ee_exec_map), symtab_get_value_addr(sym), 0);
+  for (i = 0; i < dll_num; i++) {
+    //get address of base of ld then stack addr (ee_stac_addr)
+    set_next_reloc(l, R_X86_64_64, symtab_get_index(sym), symtab_get_value_addr(sym), get_l_next(0)); //calculate l_next address location
+    set_next_reloc(l, R_X86_64_COPY, symtab_get_index(sym), symtab_get_value_addr(sym), 0); //dereference pointer
+  }
+  set_next_reloc(l, R_X86_64_COPY, symtab_get_index(sym), symtab_get_value_addr(sym), 0); // get base address
+  pclose(f);
   return l->lm_next_reloc - start;
 }
 
@@ -144,42 +240,34 @@ eresi_Addr init_scatch_space(elf_bf_exec_t *ee)
   elf_bf_link_map_t *l = &(ee->ee_lm);
   eresi_Addr start = l->lm_next_reloc;
 
-
-  //copy new tape value into workspace
+  //copy initial tape value into workspace
   set_next_reloc(l, R_X86_64_COPY, symtab_get_index(ee->ee_ptr_tape_ptr),
 		 symtab_get_value_addr(ee->ee_tape_ptr), 0);
 
-  //get linkmap value
-  set_next_reloc(l, R_X86_64_COPY, symtab_get_index(ee->ee_exec_map), symtab_get_value_addr(ee->ee_exec_map), 0);
+  //get base addr of ld
+  lookup_library_base_addr(ee, ee->ee_ld_base, "ld-*");
+  
 
-  //get address of base of ld then stack addr (ee_stac_addr)
-  set_next_reloc(l, R_X86_64_64, symtab_get_index(ee->ee_exec_map), symtab_get_value_addr(ee->ee_stack_addr), get_l_next(0)); //calculate l_next address location
-  set_next_reloc(l, R_X86_64_COPY, symtab_get_index(ee->ee_stack_addr), symtab_get_value_addr(ee->ee_stack_addr), 0); //calculate l_next address location
+  //get base addr of libc
+  lookup_library_base_addr(ee, ee->ee_libc_base, "libc.so");
 
-  //get address of base of ld then stack addr (ee_stac_addr)
-  set_next_reloc(l, R_X86_64_64, symtab_get_index(ee->ee_exec_map), symtab_get_value_addr(ee->ee_stack_addr), get_l_next(0)); //calculate l_next address location
-  set_next_reloc(l, R_X86_64_COPY, symtab_get_index(ee->ee_stack_addr), symtab_get_value_addr(ee->ee_stack_addr), 0); //calculate l_next address location
-
-  //get address of base of ld then stack addr (ee_stac_addr)
-  set_next_reloc(l, R_X86_64_64, symtab_get_index(ee->ee_stack_addr), symtab_get_value_addr(ee->ee_stack_addr), get_l_next(0)); //calculate l_next  address location
-  set_next_reloc(l, R_X86_64_COPY, symtab_get_index(ee->ee_stack_addr), symtab_get_value_addr(ee->ee_stack_addr), 0);
-
-  //get address of base of ld then stack addr (ee_stac_addr)
-  set_next_reloc(l, R_X86_64_64, symtab_get_index(ee->ee_stack_addr), symtab_get_value_addr(ee->ee_stack_addr), get_l_next(0)); //calculate l_next address location
-  set_next_reloc(l, R_X86_64_COPY, symtab_get_index(ee->ee_stack_addr), symtab_get_value_addr(ee->ee_stack_addr), 0);
-
-
-  set_next_reloc(l, R_X86_64_COPY, symtab_get_index(ee->ee_stack_addr), symtab_get_value_addr(ee->ee_stack_addr), 0);
-
+  
   // save addess of ROP code that returns 0, ldbase + 0x148DE, (at addr 5555555688de)
-  set_next_reloc(l, R_X86_64_64, symtab_get_index(ee->ee_stack_addr), symtab_get_value_addr(ee->ee_lm.lm_ifunc), ee->ee_ifunc_offset); //calculate ifunc addr
+  set_next_reloc(l, R_X86_64_64, symtab_get_index(ee->ee_ld_base), symtab_get_value_addr(ee->ee_lm.lm_ifunc), ee->ee_ifunc_offset); //calculate ifunc addr
+
+
   //calculate address of _dl_auxv  (0x555555771e28- 0x555555554000)=0x21DE28
-  set_next_reloc(l, R_X86_64_64, symtab_get_index(ee->ee_stack_addr), symtab_get_value_addr(ee->ee_stack_addr), ee->ee_dl_auxv); //calculate address of _dl_auxv that is a pointer to the aux vector that lives on stack
-  //save addres of auxv
+  set_next_reloc(l, R_X86_64_64, symtab_get_index(ee->ee_ld_base), symtab_get_value_addr(ee->ee_stack_addr), ee->ee_dl_auxv); //calculate address of _dl_auxv that is a pointer to the aux vector that lives on stack
+  //follow pointer to addres of auxv
   set_next_reloc(l, R_X86_64_COPY, symtab_get_index(ee->ee_stack_addr), symtab_get_value_addr(ee->ee_stack_addr), 0);
 
   // calculate &end on stack with respect to auxv
   set_next_reloc(l, R_X86_64_64, symtab_get_index(ee->ee_stack_addr), symtab_get_value_addr(ee->ee_stack_addr), ee->ee_end_offset); //calculate l_next address location
+  
+  // save address of exec's link map
+  set_next_reloc(l, R_X86_64_COPY, symtab_get_index(ee->ee_exec_map), symtab_get_value_addr(ee->ee_exec_map_value), 0);
+  setup_syscall_symbol(ee, ee->ee_libc_base, l->lm_getchar, lookup_libc_offset_bf_env(ee, "getchar"));
+  setup_syscall_symbol(ee, ee->ee_libc_base, l->lm_putchar, lookup_libc_offset_bf_env(ee, "putchar"));
 
   return l->lm_next_reloc - start;
 }
@@ -263,8 +351,11 @@ eresi_Addr update_exec_linkmap(elf_bf_exec_t *ee, eresi_Addr offset, eresi_Addr 
   reloc_get_reloc_entry(l, updatei, &update);
 
   //save value of offset+link_map addr in next relocation entry
-  reloc_set_rela(&calculate, R_X86_64_64, symtab_get_index(ee->ee_exec_map), reloc_get_offset_addr(&update), offset);
+  //eresi_Addr u = reloc_get_offset_addr(&update);
+
+  reloc_set_rela(&calculate, R_X86_64_64, symtab_get_index(ee->ee_exec_map_value), reloc_get_offset_addr(&update), offset);
   reloc_set_rela(&update, R_X86_64_RELATIVE, 0, 0, value);//offset filled in at runtime
+
 
   return l->lm_next_reloc - start;
 }
@@ -286,11 +377,13 @@ eresi_Addr update_exec_linkmap_offset(elf_bf_exec_t *ee, eresi_Addr offset, eres
   reloc_get_reloc_entry(l, calculatei, &calculate);
   reloc_get_reloc_entry(l, updatei, &update);
 
+  //printf("update 5 %x", updatei);
   //save value of offset+link_map addr in next relocation entry
-  reloc_set_rela(&calculate, R_X86_64_64, symtab_get_index(ee->ee_exec_map), reloc_get_offset_addr(&update), offset);
-  reloc_set_rela(&update, R_X86_64_64, symtab_get_index(ee->ee_exec_map), 0, value);//offset filled in at runtime
+  //_64
+  reloc_set_rela(&calculate, R_X86_64_64, symtab_get_index(ee->ee_exec_map_value), reloc_get_offset_addr(&update), offset);
+  reloc_set_rela(&update, R_X86_64_64, symtab_get_index(ee->ee_exec_map_value), 0, value);//offset filled in at runtime
 
-
+  //printf("updating %x", reloc_get_offset_addr(&update))
   return l->lm_next_reloc - start;
 }
 
@@ -298,7 +391,6 @@ eresi_Addr elfops_prepare_branch(elf_bf_exec_t *ee) //10
 {
   elf_bf_link_map_t *l = &(ee->ee_lm);
   eresi_Addr start = l->lm_next_reloc;
-
 
   update_exec_linkmap(ee, get_l_buckets(0), 0); //let l_buckets to NULL
 
@@ -310,25 +402,62 @@ eresi_Addr elfops_prepare_branch(elf_bf_exec_t *ee) //10
     //set_next_reloc(l, R_X86_64_RELATIVE, 0, get_l_libname_next(l->lm_l_s), get_l_relocated(l->lm_l_s)-4*sizeof(int)); // rewire l_libname->next so relocated bit gets cleared
   //set_next_reloc(l, R_X86_64_RELATIVE, 0, get_l_prev(l->lm_l_s), l->lm_l_s); // prev points to self so it gets processed again
   update_exec_linkmap_offset(ee, get_l_prev(0), 0);
-
+  
   //set own relrosize as 0 so memory protections arent set
   update_exec_linkmap(ee, get_l_relro_size(0), 0);
-  //wipe pltgot
+  
+  //wipe pltgot[1]
   set_next_reloc(l, R_X86_64_RELATIVE, 0, ee->ee_dt_pltgot, 0);
 
   return l->lm_next_reloc - start;
 }
 
+eresi_Addr elfops_putchar(elf_bf_exec_t *ee)
+{
+  eresi_Addr start;
+  elf_bf_link_map_t *l = &(ee->ee_lm);
+  start = l->lm_next_reloc;
+
+  eresi_Addr savei, putci, findputci, copyi, offseti;
+  elf_bf_Rela save, putc, findputc, copy, offset;
+
+  savei = set_next_reloc(l, 0, 0, 0, 0);
+  findputci = set_next_reloc(l, 0, 0, 0, 0);
+  //offseti = set_next_reloc(l, 0, 0, 0, 0);
+  copyi = set_next_reloc(l, 0, 0, 0, 0);
+  putci = set_next_reloc(l, 0, 0, 0, 0);
+  reloc_get_reloc_entry(l, savei, &save);
+  reloc_get_reloc_entry(l, findputci, &findputc);
+  //reloc_get_reloc_entry(l, offseti, &offset);
+  reloc_get_reloc_entry(l, copyi, &copy);
+  reloc_get_reloc_entry(l, putci, &putc);
+
+  // copy tape value + writable address to COPY's offset
+  reloc_set_rela(&save, R_X86_64_64, symtab_get_index(ee->ee_tape_ptr), reloc_get_offset_addr(&copy), 0x6013ff); //TODO: find a region of 0xFF bytes that are writable , don't hardcode addend. Also why off by one????
+  
+  // save address of putc to next reloc entry
+  reloc_set_rela(&findputc, R_X86_64_64, symtab_get_index(l->lm_putchar), reloc_get_addend_addr(&putc), 0);
+
+  //reloc_set_rela(&save, R_X86_64_64, symtab_get_index(ee->ee_ptr_tape_copy), reloc_get_offset_addr(&putc), 0x601400); //TODO: find a region of 0xFF bytes that are writable , don't hardcode addend
+
+  // set copy's offset
+  //reloc_set_rela(
+
+  // copy
+  reloc_set_rela(&copy, R_X86_64_COPY, symtab_get_index(l->lm_putcharextra), 0, 0);
+
+  // call putchar
+  reloc_set_rela(&putc, R_X86_64_IRELATIVE, 0, reloc_get_offset_addr(&copy), 0); //it doesn't matter where result is written to
+
+  return l->lm_next_reloc - start;
+
+}
 eresi_Addr elfops_exit(elf_bf_exec_t *ee)
 {
   eresi_Addr start;
   elf_bf_link_map_t *l = &(ee->ee_lm);
   start = l->lm_next_reloc;
-  //this will end up causing the loader to divide by zero
-  //if (l->lm_allocated) {
-  //  reloc_set_rela(&r0, R_X86_64_TLSDESC, 0, 0, 0);
-  //  l->lm_next_reloc = index;
-  //}
+
   // force a branch to run original relocation entrires
 
   // restore PLT stuff
@@ -354,7 +483,9 @@ eresi_Addr elfops_exit(elf_bf_exec_t *ee)
 
   //force immediate branch so that we finally process PLT entries
   //address of end is in symbol...
-  set_end_value(ee, 0);
+
+  
+  set_end_value(ee, 0); 
 
   // restore l_buckets
   bucketi = relaszi + 3;
@@ -384,7 +515,7 @@ eresi_Addr elfops_exit(elf_bf_exec_t *ee)
   set_next_reloc(l, R_X86_64_RELATIVE, 0, ee->ee_dt_rela,ee->ee_rela_orig);
 
   //restore PLTGOT
-  set_next_reloc(l, R_X86_64_64, symtab_get_index(ee->ee_exec_map),ee->ee_dt_pltgot, 0);
+  set_next_reloc(l, R_X86_64_64, symtab_get_index(ee->ee_exec_map_value),ee->ee_dt_pltgot, 0);
 
 
   //restore RELACOUNT or whatever to original value

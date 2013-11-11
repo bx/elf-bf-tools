@@ -34,9 +34,10 @@ typedef struct {
   //elf_bf_Sym *ee_tape_copy; //copy of value tape is pointing to
   elf_bf_Sym *ee_exec_map; //eventually holds address of exec's link_map
   elf_bf_Sym *ee_ld_base; //eventually holds base address of ld
+  elf_bf_Sym *ee_libc_base; //eventually holds base address of libc
   elf_bf_Sym *ee_stack_addr; //eventaully holds address of known item on stack
   //elf_bf_Sym *ee_scratch_space; //scratch space for calculations
-
+  elf_bf_Sym  *ee_exec_map_value;
   unsigned int ee_tape_len;
   unsigned int ee_num_used_syms;
   unsigned int ee_num_orig_syms;
@@ -62,11 +63,14 @@ typedef struct {
   elfsh_Word ee_sym_orig;
   eresi_Addr ee_dt_gnu_hash; //GNU_HASH entry in dynamic table
   int ee_for_debug; // 1 if should be compiled to work in a debugger, 0 OW
+  char *ee_libc;
+  char *ee_exec_path;
 } elf_bf_exec_t;
 
 typedef struct {
   char *e_bf_source;
   char *e_bf_sourcepath;
+  char *e_bf_libc;
   elf_bf_exec_t e_exec;
 } elf_bf_env_t;
 
@@ -74,6 +78,7 @@ typedef struct {
 void elfutils_setup_env(char *src,
 			char *execf_in,
 			char *execf_out,
+			char *libc,
 			int tape_len,
 			eresi_Addr ifuncoffset,
 			eresi_Addr dl_auxv, // offset of _dl_auxv (in ld.so's data)
@@ -90,5 +95,11 @@ elfshsect_t *insert_symtab_sec(elfshobj_t *f, eresi_Addr numsym, eresi_Addr strt
 void fixup_dynamic_rela(elfshobj_t *f, eresi_Addr rel, eresi_Addr sz);
 void fixup_dynamic_sym(elfshobj_t *f, eresi_Addr sym, eresi_Addr sz);
 eresi_Addr set_next_reloc(elf_bf_link_map_t *l, Elf64_Word type, Elf64_Word sym, Elf64_Addr off, Elf64_Addr val);
+eresi_Addr lookup_libc_offset(char *libc, char *function);
+eresi_Addr lookup_libc_offset_bf_env(elf_bf_exec_t *ee, char *function);
+int lookup_libc_path(char *executable, char *libc_out, int len);
+int lookup_ld_path(char *exec, char *path, int pathlen);
+eresi_Addr dl_auxv_offset(char *lib);
+eresi_Addr ret0_offset(char *lib);
 
 #endif //ndef __ELF_BF_UTILS_H

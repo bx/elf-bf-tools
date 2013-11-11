@@ -38,6 +38,9 @@ typedef struct {
   elfshsect_t *lm_reloc;
   elfshsect_t *lm_sym;
   elf_bf_Sym *lm_ifunc;
+  elf_bf_Sym *lm_getchar;
+  elf_bf_Sym *lm_putchar;
+  elf_bf_Sym *lm_putcharextra;
   eresi_Addr lm_ifunc_addr; //address of machine code that returns zero
   eresi_Addr lm_l_addr;
   eresi_Addr lm_l_s; //address of own link map
@@ -55,4 +58,5 @@ void symtab_set_sym(elf_bf_Sym *sym, eresi_Addr size, eresi_Addr value, eresi_Ad
 eresi_Addr symtab_get_value_addr(elf_bf_Sym *sym);
 eresi_Addr symtab_get_link_addr(elf_bf_Sym *sym);
 eresi_Addr symtab_get_index(elf_bf_Sym *sym);
+eresi_Addr symtab_get_sym_addr_sym(elf_bf_Sym *sym);
 #endif //ifndef __SYMTAB_H

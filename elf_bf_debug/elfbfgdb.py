@@ -39,7 +39,7 @@ class ReadCurrentEntry(gdb.Command):
         self.source = None
         self.rela_loop_break = gdb.Breakpoint("do-rel.h:117") #at the loop that processes relocation entries
         self.rela_loop_break.condition = "map->l_addr==0"
-        self.rela_proc_break = gdb.Breakpoint("do-rel.h:119") #inside the loop that processes relocation entries
+        self.rela_proc_break = gdb.Breakpoint("do-rel.h:120") #inside the loop that processes relocation entries
         self.rela_proc_break.enabled = False
         self.rela_proc_break.condition = "map->l_addr==0"
         self.rela_loop_exit = RelaLoopDoneBreakpoint("rtld.c:2262")
@@ -164,7 +164,7 @@ class ReadCurrentEntry(gdb.Command):
                         #print "Instruction: %s at index %d\n" %(inst, i)
                         return i
                 except KeyError:
-                    print "skipping instruction '%s'" %inst
+                    print "skipping instruction '%s'" %inst.encode("hex")
             print "Instruction not found"
             return -2
 

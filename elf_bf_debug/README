@@ -1,26 +1,23 @@
-Copyright (c) 2012 Rebecca (bx) Shapiro
-
-Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-
-
 BUILD
 You will need to build eglibc from scratch in order to use this tool.  setup.sh
 should do all the work for you, just go ahead and run it.
 
-building eglibc requies ~800Mb of free space.
+Building eglibc requies ~800Mb of free space.
+
+You must enable source URIs in apt's sources.list for setup.sh to work properly.
 
 RUNNING
 
 run debug_rtld_exec.sh <path to executable> to debug the runtime loader as it
 runs that executable.  It also loads a set of tools that can be used to inspect
-a Brainfuck stack.  The following commands are available
+a Brainfuck stack.  We recommend running debug_rtld_exec.sh from the elf_bf_debug
+directory.
+
+
+The following commands are available
 
 elfbf setup <path to debug info>
-   -This must always be run before any other debugging comand, the debug info is the file generated from elf_bf_compiler
+   -This must always be run before any other debugging comand, the debug info file is generated from elf_bf_compiler (the debuf info file is written into the second to last argument when executing elf_bf_compiler)
 
 elfbf tape
    -prints the entire tape
@@ -53,5 +50,4 @@ elfbf rel_num
    -prints the index of the relocation entry currently being processed
 
 NOTE:
-- debug_rtld_exec-rand.sh is the same as debug_rtld_exec.sh exectp it enables ASLR
-- we use ddd because we seem to crash gdb
+- debug_rtld_exec-rand.sh is the same as debug_rtld_exec.sh execpt it enables ASLR

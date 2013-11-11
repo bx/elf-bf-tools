@@ -32,5 +32,7 @@ eresi_Addr elfops_decrement_ptr(elf_bf_exec_t *e);
 eresi_Addr elfops_exit(elf_bf_exec_t *l);
 eresi_Addr elfops_branch_start(elf_bf_exec_t *ee);
 eresi_Addr elfops_branch_end(elf_bf_exec_t *ee);
+eresi_Addr elfops_getchar(elf_bf_exec_t *ee);
+eresi_Addr elfops_putchar(elf_bf_exec_t *ee);
 eresi_Addr init_scatch_space(elf_bf_exec_t *ee);
 #endif //ifndef __ELF_BF_OPS

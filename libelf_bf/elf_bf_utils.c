@@ -21,12 +21,14 @@
 #include <elf.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
 #include <libelfsh.h>
 #include "elf_bf_utils.h"
 #include "elf_bf_ops.h"
 #include "elf_reloc_utils.h"
 #include "reloc.h"
 #include "symtab.h"
+
 
 void init_tape_pointer(elf_bf_exec_t *env);
 void init_tape_syms(elf_bf_exec_t *env);
@@ -44,6 +46,7 @@ size_t find_branch_start(size_t pos, char *instructions);
 void elfutils_setup_env(char *src,
 			char *execf_in,
 			char *execf_out,
+			char *libc,
 			int tape_len,
 			eresi_Addr ifuncoffset,
 			eresi_Addr dl_auxv, // offset of _dl_auxv (in ld.so's data)
@@ -59,6 +62,9 @@ void elfutils_setup_env(char *src,
   env->e_exec.ee_dl_auxv = dl_auxv;
   env->e_exec.ee_end_offset = endoffset;
   env->e_exec.ee_for_debug = debug;
+  env->e_bf_libc = libc;
+  env->e_exec.ee_libc = libc;
+  env->e_exec.ee_exec_path = execf_in;
   init_elf_bf_linkmap(&(env->e_exec.ee_lm), execf_in, execf_out);
   elfshsect_t *bs; //we will pretend this section is our string table
   bs = elfsh_get_section_by_name(env->e_exec.ee_lm.lm_f, ".bss", NULL, NULL, NULL);
@@ -76,8 +82,13 @@ void elfutils_setup_env(char *src,
   env->e_exec.ee_ptr_tape_copy = NULL;
   env->e_exec.ee_lm.lm_ifunc = NULL;
   env->e_exec.ee_exec_map = NULL;
+  env->e_exec.ee_ld_base = NULL;
+  env->e_exec.ee_libc_base = NULL;
   env->e_exec.ee_stack_addr = NULL;
-
+  env->e_exec.ee_lm.lm_getchar = NULL;
+  env->e_exec.ee_lm.lm_putchar = NULL;
+  env->e_exec.ee_lm.lm_putcharextra = NULL;
+  env->e_exec.ee_exec_map_value = NULL;
 
 
   env->e_exec.ee_num_reloc = bf_rela_count(env);
@@ -163,7 +174,7 @@ char *read_source(char *file)
   size_t pc;
   for (pc = 0; (src[pc] = fgetc(f)) != EOF; pc++) {}
   src[pc] = 0;
-  printf("\"%s\"",src);
+  printf("\"%s\"\n",src);
   fclose(f);
   return src;
 }
@@ -259,15 +270,24 @@ unsigned long process_bf_instructions (elf_bf_env_t *e, int countonly, size_t st
       if (! countonly) {
 	start = find_branch_start(i,e->e_bf_source);
 	size_t diff;
+	//diff = process_bf_instructions(e,1,start+1,i);
 	diff = process_bf_instructions(e,1,start+1,i);
-	//printf("diff %d, start %d, i %d\n", diff, start, i);
 	fixup_branch_start(ee,oldcount,diff, count);
-	diff = process_bf_instructions(e,1,start, i);
+	diff = process_bf_instructions(e,1,start, i); 
+	//diff = process_bf_instructions(e,1,start, i); 
 	fixup_branch_end(ee,oldcount,diff);
       }
       break;
     case 'X':
-      count = count+elfops_exit(ee);
+      count = count+elfops_exit(ee);	      
+      break;
+    case ',': // getchar (. is putchar)
+      count = count+elfops_getchar(ee);
+      break;
+
+    case '.': // putchar
+      count = count+elfops_putchar(ee);
+      break;
     case '\n':
     case '\r':
     case '\t':
@@ -429,7 +449,7 @@ void elfutils_save_env(elf_bf_env_t *env)
 void init_tape_syms(elf_bf_exec_t *env)
 {
 
-  elf_bf_Sym *sym, *psym, *ifunc, *execmap, *ptrtapecpy, *stackaddr;
+  elf_bf_Sym *sym, *psym, *ifunc, *execmap, *ptrtapecpy, *stackaddr, *getchar, *putchar, *ldbase, *libcbase, *execmapvalue, *putcharextra;
   elf_bf_Sym top;
   if (env->ee_lm.lm_allocated){
     psym = calloc(1, sizeof(elf_bf_Sym));
@@ -438,6 +458,12 @@ void init_tape_syms(elf_bf_exec_t *env)
     ifunc = calloc(1, sizeof(elf_bf_Sym));
     execmap = calloc(1, sizeof(elf_bf_Sym));
     stackaddr = calloc(1, sizeof(elf_bf_Sym));
+    ldbase = calloc(1, sizeof(elf_bf_Sym));
+    libcbase = calloc(1, sizeof(elf_bf_Sym));
+    getchar = calloc(1, sizeof(elf_bf_Sym));
+    putchar = calloc(1, sizeof(elf_bf_Sym));
+    putcharextra = calloc(1, sizeof(elf_bf_Sym));
+    execmapvalue = calloc(1, sizeof(elf_bf_Sym));
   }
   eresi_Addr index = env->ee_num_used_syms;
   //index++;
@@ -448,7 +474,16 @@ void init_tape_syms(elf_bf_exec_t *env)
   symtab_get_sym(&(env->ee_lm), index++, ifunc);
   symtab_get_sym(&(env->ee_lm), index++, ptrtapecpy);
   symtab_get_sym(&(env->ee_lm), index++, execmap);
-  symtab_get_sym(&(env->ee_lm), index, stackaddr);
+  symtab_get_sym(&(env->ee_lm), index++, stackaddr);
+  symtab_get_sym(&(env->ee_lm), index++, ldbase);
+  symtab_get_sym(&(env->ee_lm), index++, libcbase);
+  symtab_get_sym(&(env->ee_lm), index++, getchar);
+  symtab_get_sym(&(env->ee_lm), index++, putchar);
+  symtab_get_sym(&(env->ee_lm), index++, putcharextra);
+  symtab_get_sym(&(env->ee_lm), index, execmapvalue);
+
+  
+
   if (env->ee_lm.lm_allocated){
     env->ee_num_used_syms = index;
 
@@ -475,6 +510,13 @@ void init_tape_syms(elf_bf_exec_t *env)
 
 
     symtab_set_sym(stackaddr, 8, 0, STT_FUNC);
+    symtab_set_sym(ldbase, 8, 0, STT_FUNC);
+    symtab_set_sym(libcbase, 8, 0, STT_FUNC);
+    symtab_set_sym(getchar, 8, 0, STT_FUNC);
+    symtab_set_sym(putchar, 8, 0, STT_FUNC);
+    symtab_set_sym(putcharextra, 1, pltgot, STT_FUNC);  //we jsut want a readable address here
+    //printf("ptr_tape_ptr %x, tape_ptr %x, copy %x\n", symtab_get_index(psym), symtab_get_index(sym), symtab_get_index(ptrtapecpy));
+    symtab_set_sym(execmapvalue, 8, 0, STT_FUNC);
 
     //env->ee_tape_symnum = psym->index;
     env->ee_ptr_tape_ptr = psym;
@@ -483,6 +525,12 @@ void init_tape_syms(elf_bf_exec_t *env)
     env->ee_ptr_tape_copy = ptrtapecpy;
     env->ee_exec_map = execmap;
     env->ee_stack_addr = stackaddr;
+    env->ee_ld_base = ldbase;
+    env->ee_libc_base = libcbase;
+    env->ee_lm.lm_getchar = getchar;
+    env->ee_lm.lm_putchar = putchar;
+    env->ee_lm.lm_putcharextra = putcharextra;
+    env->ee_exec_map_value = execmapvalue;
   }
   env->ee_num_new_syms = index - env->ee_num_used_syms;
 }
@@ -517,4 +565,125 @@ eresi_Addr set_next_reloc(elf_bf_link_map_t *l, Elf64_Word type, Elf64_Word sym,
   } //otherwise just count
   l->lm_next_reloc++;
   return l->lm_next_reloc - 1;
+}
+
+eresi_Addr lookup_libc_offset(char *libc, char *function)
+{
+  elfshobj_t *f;
+  elfsh_Rela *r;
+  elfsh_Sym *s;
+  int i;
+  char *cmpname;
+  f = elfutils_read_elf_file(libc);
+
+  elfshsect_t *dynsym, *strtab;
+  dynsym =  elfsh_get_section_by_name(f,".dynsym", NULL, NULL, NULL);
+
+  // lookup strtab
+  strtab = elfsh_get_section_by_index(f, elfsh_get_section_link(dynsym->shdr), NULL, NULL);
+
+  // get symbol
+  elfsh_Sym *table;
+  table = (elfsh_Sym *) dynsym->data;
+  eresi_Addr numsym = elfsh_get_section_size(dynsym->shdr)/sizeof(elfsh_Sym);
+
+  char *strs = strtab->data;
+
+  for (i = 0; i < numsym; i++) {
+    //look at each entry
+    s = &(table[i]);
+    cmpname = strs + s->st_name;
+    if(strcmp(function, cmpname) == 0){
+      return s->st_value;
+    }
+  }
+  return 0;  
+}
+
+eresi_Addr lookup_libc_offset_bf_env(elf_bf_exec_t *ee, char *function)
+{
+  return lookup_libc_offset(ee->ee_libc, function);
+}
+
+int lookup_libc_path(char *executable, char *libc_out, int max)
+{
+  char *command;
+  char *format =  "ldd %s | grep '/libc.so' | awk '{print $3;}'";
+  int len, i;
+
+  if ((command = malloc(strlen(format) + strlen(executable))) == NULL) {
+    return -1;
+  }
+  sprintf(command, format, executable);
+  FILE *f = popen(command, "r");
+  len = fread(libc_out, 1, max, f);
+  for (i = 0; i < len; i++) {
+    if ('\n' == libc_out[i]) {
+      libc_out[i] = '\0';
+    }
+  }
+  if (len < 0) {
+    return -1;
+  }
+  pclose(f);
+  return len;
+}
+
+
+
+int lookup_ld_path(char *exec, char *path, int pathlen){
+  char *p;
+  int len;
+  elfshobj_t *f;
+  f = elfutils_read_elf_file(exec);
+  if (NULL == f) {
+    return -1;
+  }
+  p = elfsh_get_interp(f);
+  if (NULL == p){
+    return -1;
+  }
+  strncpy(path, p, pathlen);
+  return strlen(path);
+}
+
+eresi_Addr dl_auxv_offset(char *lib){
+  elfshobj_t *f;
+  f = elfutils_read_elf_file(lib);
+  if (NULL == f){
+    return -1;
+  }
+  elfsh_Sym *s;
+  s = elfsh_get_symbol_by_name(f, "_dl_auxv");
+  return s->st_value;
+}
+
+eresi_Addr ret0_offset(char *lib) {
+  //148dc:       31 c0                   xor    %eax,%eax
+  //148de:       c3                      retq   
+  // look at text segment, search for byte value c3
+  elfshsect_t *text, *init, *plt;
+  eresi_Addr offset;
+  unsigned char *data;
+  eresi_Addr sz, i;
+  unsigned char seq[3] = {0x31,0xc0,0xc3};
+  elfshobj_t *f;
+  f = elfutils_read_elf_file(lib);
+  if (NULL == f){
+    return -1;
+  }
+  text =  elfsh_get_section_by_name(f,".text", NULL, NULL, NULL);
+  if (NULL == text){
+    return -1;
+  }
+  
+  data = (char *) text->data;
+  sz = elfsh_get_section_size(text->shdr);
+  for (i = 0; i < (sz-2); i++) {
+    if ((seq[0] == data[i]) && (seq[1] == data[i+1]) && (seq[2] == data[i+2])) {
+      return i + text->shdr->sh_addr;
+    }
+  }
+  return 0;
+
 }

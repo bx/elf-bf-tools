@@ -1,5 +1,3 @@
-#!/bin/bash
-
 
 # Copyright (c) 2012 Rebecca (bx) Shapiro
 
@@ -22,21 +20,10 @@
 # SOFTWARE.
 
 
-# this file sets up and builds egblic so we can use its debugging symbols
-mkdir eglibc
-cd eglibc
-apt-get source eglibc
-sudo apt-get build-dep eglibc
-sudo apt-get install gperf gdb
-mkdir root
-mkdir build
-cd build
-export CFLAGS="-U_FORTIFY_SOURCE -g -O -fno-stack-protector"
-../eglibc-2.13/configure --prefix=$PWD/../root
-mkdir ../root
-mkdir ../root/etc/
-touch ../root/etc/ld.so.conf
-make -j 8
-make install
+
+include_directories(${elf-bf-tools_SOURCE_DIR}/libelf_bf)
+add_executable(putchar putchar.c)
 
 
+link_directories(/usr/local/lib)
+target_link_libraries(putchar ${ELFBF_LIBS})

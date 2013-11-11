@@ -81,3 +81,12 @@ eresi_Addr symtab_get_link_addr(elf_bf_Sym *sym)
     return 0;
   }
 }
+
+eresi_Addr symtab_get_sym_addr_sym(elf_bf_Sym *sym)
+{
+  if (sym) {
+    return sym->addr;
+  } else {
+    return 0;
+  }
+}
