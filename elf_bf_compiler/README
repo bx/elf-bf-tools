@@ -29,7 +29,14 @@ NOTES:
 - if elf_bf_compiler expects its executable will be run in a debugger (if debug config name is specified), it needs to set things up differently (the stack layout differs)
 - elf_bf_compiler assumes that your executable uses the same basic set of libraries as demo. There is no way for a user to easily adjust this yet.
 
-FUTURE WORK:
+CAUTIONARY NOTE:
+- putchar() is not fully tested and may not work in all cases.  Our implementation of puchar requires
+the ability to write to a region of memory of size 0xFF bytes.  Currently we have hardcoded an address that
+we expect to be writable and if written to it won't cause too many problems -- 0x601400 -- which corresponds
+to a region of memory towards the end of the brainfuck tape. If, for example, we want to print an 'A'
+then an arbitrary byte will be written to address 0x601441.  We could set things up so that the byte at 0x601441 is restored after putchar() is called to make this more robust, but who has time for that? Instead we will save this as an exercise for someone brave enough to dig through and edit libelf_bf source code.
+
+"FUTURE WORK":
 - allow the user to configure the compiler to work with a binary that uses more libraries than ../demo/demo uses
 - let the compiler figure out the number of libraries that will be loaded for the executable on the fly so everything works automatically
 - (maybe) write debugger scripts that automatically determine the offsets we need
