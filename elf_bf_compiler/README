@@ -24,17 +24,13 @@ USAGE:
    - the defaults offsets consistently work with our setup, you may need to tweak them to get them working with your libraries.
    - if any offset is provided, all offsets must be provided
    - <offset of &end to _dl_auxv>: &end - _dl_auxv, you can find &end and _dl_auxv by running a binary in gdb using elf_bf_debug/debug_rtld_exec.sh.  Once it starts running, it will break at do-rel.h:117.  At this point you can print &end. If you go up in the call stack 3 times (via the up command), you will be at dl-sysdep.c:244.  At this point you can print _dl_auxv.  Please note that the offset of &end from _dl_auxv may be different when a binary is being run outside of gdb.  If this is a case, metadata that implements branches may cause a segfault and you can inspect the coredump with gdb to get the values of &end and _dl_auxv for binaries running outside gdb.
-
+  - Our brainfuck implementation supports one extra instruction: X
+     - X is the exit instruction.  Make it the last instruction in your brainfuck source code to ensure the executable's original metadata is processed so that the executable hosting the compiled brainfuck code can cleanly execute.
 NOTES:
 - if elf_bf_compiler expects its executable will be run in a debugger (if debug config name is specified), it needs to set things up differently (the stack layout differs)
 - elf_bf_compiler assumes that your executable uses the same basic set of libraries as demo. There is no way for a user to easily adjust this yet.
 
-CAUTIONARY NOTE:
-- putchar() is not fully tested and may not work in all cases.  Our implementation of puchar requires
-the ability to write to a region of memory of size 0xFF bytes.  Currently we have hardcoded an address that
-we expect to be writable and if written to it won't cause too many problems -- 0x601400 -- which corresponds
-to a region of memory towards the end of the brainfuck tape. If, for example, we want to print an 'A'
-then an arbitrary byte will be written to address 0x601441.  We could set things up so that the byte at 0x601441 is restored after putchar() is called to make this more robust, but who has time for that? Instead we will save this as an exercise for someone brave enough to dig through and edit libelf_bf source code.
+
 
 "FUTURE WORK":
 - allow the user to configure the compiler to work with a binary that uses more libraries than ../demo/demo uses

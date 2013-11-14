@@ -274,7 +274,7 @@ void insert_putchar(char c, elf_bf_link_map_t *l, elf_bf_Sym *got) {
   eresi_Addr v = reloc_get_addr(&setrel);
   v = v & 0xFFFF00;
   v += c;
- set_next_reloc(l, R_X86_64_COPY, got->index, v, 0); //set RDI value (first argument)
+ set_next_reloc(l, R_X86_64_COPY, got->index, c, 0); //set RDI value (first argument)
   irel_addr = set_next_reloc(l, R_X86_64_IRELATIVE, 0,reloc_get_addr(&setrel),0); //call ifunc . addend is filled in at runtime. result stored at setrel_addr
   reloc_get_reloc_entry(l, irel_addr, &irel);
   reloc_set_relaoffset(&setrel, reloc_get_addend_addr(&irel)); //tell exit to write putchar addr to IRELATIVE entry

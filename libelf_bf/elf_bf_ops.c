@@ -433,7 +433,7 @@ eresi_Addr elfops_putchar(elf_bf_exec_t *ee)
   reloc_get_reloc_entry(l, putci, &putc);
 
   // copy tape value + writable address to COPY's offset
-  reloc_set_rela(&save, R_X86_64_64, symtab_get_index(ee->ee_tape_ptr), reloc_get_offset_addr(&copy), 0x6013ff); //TODO: find a region of 0xFF bytes that are writable , don't hardcode addend. Also why off by one????
+  reloc_set_rela(&save, R_X86_64_64, symtab_get_index(ee->ee_tape_ptr), reloc_get_offset_addr(&copy), 0);
   
   // save address of putc to next reloc entry
   reloc_set_rela(&findputc, R_X86_64_64, symtab_get_index(l->lm_putchar), reloc_get_addend_addr(&putc), 0);

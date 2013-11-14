@@ -514,7 +514,7 @@ void init_tape_syms(elf_bf_exec_t *env)
     symtab_set_sym(libcbase, 8, 0, STT_FUNC);
     symtab_set_sym(getchar, 8, 0, STT_FUNC);
     symtab_set_sym(putchar, 8, 0, STT_FUNC);
-    symtab_set_sym(putcharextra, 1, pltgot, STT_FUNC);  //we jsut want a readable address here
+    symtab_set_sym(putcharextra, 0, 0, STT_FUNC);  //we jsut want a readable address here
     //printf("ptr_tape_ptr %x, tape_ptr %x, copy %x\n", symtab_get_index(psym), symtab_get_index(sym), symtab_get_index(ptrtapecpy));
     symtab_set_sym(execmapvalue, 8, 0, STT_FUNC);
 
