@@ -1,6 +1,6 @@
 OVERVIEW
 This project contains tools that can be used to coarse the gcc's runtime loader
-into performing interesing operations using only valid relocation entires and
+into performing interesting operations using only valid relocation entries and
 symbols.
 
 Slides from our DEFCON 20 talk can be found here:
@@ -12,14 +12,14 @@ http://www.cs.dartmouth.edu/~bx/elf-bf-tools/slides/ELF-berlinsides-0x3.pdf
 Slides from our 29C3 talk can be found here:
 http://www.cs.dartmouth.edu/~bx/elf-bf-tools/slides/ELF-29c3.pdf
 
-Slides from our USEIX WOOT 2013 talk can be found here:
+Slides from our USENIX WOOT 2013 talk can be found here:
 http://www.cs.dartmouth.edu/~bx/elf-bf-tools/slides/ELF-WOOT-2013.pdf
 
 
 directories:
 libelf_bf/ contains files that make up the library
 elf_bf_compiler/ implementation for Brainfuck to ELF compiler
-elf_bf_debug/ contains useful scripts for debugging the rultime loading process
+elf_bf_debug/ contains useful scripts for debugging the runtime loading process
 as it processes relocation entries
 ping_backdoor/ contains code that uses relocation entries to build a backdoor
 into ping
@@ -54,7 +54,7 @@ make
 
 ..and that's it
 
-Thank's for reading, be sure to visit the README files located in
+Thanks for reading, be sure to visit the README files located in
 elf_bf_compiler, elf_bf_debug, and ping_backdoor if you end up working with the
 code there.
 
